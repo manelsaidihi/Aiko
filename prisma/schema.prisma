@@ -33,6 +33,7 @@ model ServiceRequest {
   subcategory String?
   location    String
   budget      String
+  wilaya      String
   status      String   @default("open") // "open", "assigned", "completed"
   employerId  String
   workerId    String?
