@@ -48,9 +48,28 @@ export const authService = {
     return result;
   },
 
+  async getMe(): Promise<any> {
+    const token = this.getToken();
+    if (!token) throw new Error('No token found');
+
+    const response = await fetch('/api/auth/me', {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
+
+    if (!response.ok) {
+      this.clearToken();
+      throw new Error('Session expired');
+    }
+
+    const user = await response.json();
+    localStorage.setItem('aiko_user', JSON.stringify(user));
+    return user;
+  },
+
   logout(): void {
     this.clearToken();
-    window.location.href = '/login';
   },
 
   getCurrentUser(): any {
