@@ -242,6 +242,9 @@ type UserRole = 'employer' | 'worker';
 
 const translations = {
   ar: {
+    email_label: 'البريد الإلكتروني',
+    login_error: 'خطأ في تسجيل الدخول، تحقق من بياناتك',
+    register_error: 'حدث خطأ أثناء إنشاء الحساب',
     app_tagline: 'منصة العمل الذكية · الدقة والاحترافية',
     choose_lang: 'اختر لغتك',
     next_btn: 'التالي',
@@ -317,9 +320,14 @@ const translations = {
     kaizen: 'كايزن',
     monozukuri: 'مونو زوكوري',
     omotenashi: 'أوموتيناشي',
-    location: 'الجزائر العاصمة، باب الزوار'
+    location: 'الجزائر العاصمة، باب الزوار',
+    cat_all: 'الكل',
+    categories: 'التصنيفات'
   },
   en: {
+    email_label: 'Email Address',
+    login_error: 'Login failed, please check your credentials',
+    register_error: 'An error occurred during registration',
     app_tagline: 'Smart Work Platform · Precision & Excellence',
     choose_lang: 'Choose Your Language',
     next_btn: 'Next',
@@ -395,9 +403,14 @@ const translations = {
     kaizen: 'Kaizen',
     monozukuri: 'Monozukuri',
     omotenashi: 'Omotenashi',
-    location: 'Algiers, Bab Ezzouar'
+    location: 'Algiers, Bab Ezzouar',
+    cat_all: 'All',
+    categories: 'Categories'
   },
   fr: {
+    email_label: 'Adresse Email',
+    login_error: 'Échec de la connexion, vérifiez vos identifiants',
+    register_error: "Une erreur s'est produite lors de l'inscription",
     app_tagline: 'Plateforme de Travail Intelligente · Précision',
     choose_lang: 'Choisissez votre langue',
     next_btn: 'Suivant',
@@ -473,7 +486,9 @@ const translations = {
     kaizen: 'Kaizen',
     monozukuri: 'Monozukuri',
     omotenashi: 'Omotenashi',
-    location: 'Alger, Bab Ezzouar'
+    location: 'Alger, Bab Ezzouar',
+    cat_all: 'Tout',
+    categories: 'Catégories'
   }
 };
 
@@ -755,11 +770,16 @@ const WorkerCard = ({ name, skill, rating, price, distance, icon: Icon, onOffer,
 };
 
 // --- Main App ---
+import { authService } from './services/authService';
 
 export default function App() {
+  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [isAppLoading, setIsAppLoading] = useState(true);
+  const [isAuthLoading, setIsAuthLoading] = useState(false);
+  const [email, setEmail] = useState('');
   const [showSplash, setShowSplash] = useState(true);
   const [lang, setLang] = useState<Language>('ar');
-  const [step, setStep] = useState<'lang' | 'onboard' | 'auth' | 'role' | 'dashboard'>('lang');
+  const [currentView, setCurrentView] = useState<'lang' | 'onboard' | 'auth' | 'role' | 'dashboard'>('lang');
   const [userRole, setUserRole] = useState<UserRole | null>(null);
   const [authMode, setAuthMode] = useState<'login' | 'signup'>('login');
   const [phoneNumber, setPhoneNumber] = useState('');
@@ -898,11 +918,11 @@ export default function App() {
     
     // Simulating requested behavior
     if ((window as any).langFromProfile) {
-      setStep('dashboard');
+      setCurrentView('dashboard');
       setActiveTab('profile');
       (window as any).langFromProfile = false;
     } else {
-      setStep('onboard');
+      setCurrentView('onboard');
     }
   };
 
@@ -921,21 +941,82 @@ export default function App() {
   );
 
   const resetApp = () => {
-    setStep('lang');
+    setCurrentView('lang');
     setUserRole(null);
     setActiveTab('feed');
   };
 
   const goBack = () => {
-    if (step === 'dashboard') setStep('role');
-    else if (step === 'role') setStep('onboard');
-    else if (step === 'onboard') setStep('lang');
+    if (currentView === 'dashboard') setCurrentView('role');
+    else if (currentView === 'role') setCurrentView('onboard');
+    else if (currentView === 'onboard') setCurrentView('lang');
   };
 
   useEffect(() => {
+    const initAuth = async () => {
+      const token = authService.getToken();
+      if (token) {
+        try {
+          const user = await authService.getMe();
+          setCurrentUser(user);
+          setUserRole(user.role);
+          setCurrentView('dashboard');
+        } catch (err) {
+          authService.clearToken();
+          setCurrentView('auth');
+        }
+      }
+      setIsAppLoading(false);
+    };
+    initAuth();
     const timer = setTimeout(() => setShowSplash(false), 2500);
     return () => clearTimeout(timer);
   }, []);
+
+  const handleLogin = async () => {
+    setIsAuthLoading(true);
+    try {
+      const data = await authService.login(email, password);
+      setCurrentUser(data.user);
+      setUserRole(data.user.role);
+      setCurrentView('dashboard');
+      showToast(isRTL ? 'تم تسجيل الدخول بنجاح' : 'Login successful');
+    } catch (err: any) {
+      showToast(t.login_error, 'error');
+    } finally {
+      setIsAuthLoading(false);
+    }
+  };
+
+  const handleRegister = async () => {
+    if (password !== confirmPassword) {
+      showToast(isRTL ? 'كلمات المرور غير متطابقة' : 'Passwords do not match', 'error');
+      return;
+    }
+    setIsAuthLoading(true);
+    try {
+      const data = await authService.register({
+        name: fullName,
+        email,
+        password,
+        role: userRole || 'worker',
+        location: wilaya && commune ? `${wilaya}, ${commune}` : undefined
+      });
+      setCurrentUser(data.user);
+      setUserRole(data.user.role);
+      setCurrentView('dashboard');
+      showToast(isRTL ? 'تم إنشاء الحساب بنجاح' : 'Registration successful');
+    } catch (err: any) {
+      showToast(t.register_error, 'error');
+    } finally {
+      setIsAuthLoading(false);
+    }
+  };
+
+  const handleLogout = () => {
+    authService.logout();
+    window.location.reload();
+  };
 
   const categories = [
     { id: 'all', label: t.cat_all, icon: Globe, i18n: 'cat_all' },
@@ -1084,6 +1165,28 @@ export default function App() {
     );
   };
 
+  if (isAppLoading) {
+    return (
+      <div className="fixed inset-0 z-[9999] bg-white flex flex-col items-center justify-center overflow-hidden">
+        <motion.div
+          initial={{ scale: 0.8, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{ duration: 1, ease: "easeOut" }}
+          className="relative"
+        >
+          <Logo size="xl" />
+        </motion.div>
+        <motion.div
+          animate={{ opacity: [0.3, 1, 0.3] }}
+          transition={{ duration: 2, repeat: Infinity }}
+          className="flex gap-2 mt-12"
+        >
+          {[0, 1, 2].map(i => <div key={i} className="w-3 h-3 bg-aiko-teal rounded-full" />)}
+        </motion.div>
+      </div>
+    );
+  }
+
   if (showSplash) {
     return (
       <div className="fixed inset-0 z-[9999] bg-linear-to-br from-[#0A7878] via-[#0FA3A3] to-[#4DC8C8] flex flex-col items-center justify-center overflow-hidden">
@@ -1120,7 +1223,7 @@ export default function App() {
       <AnimatePresence mode="wait">
         
         {/* --- Language Screen --- */}
-        {step === 'lang' && (
+        {currentView === 'lang' && (
           <motion.div 
             key="lang"
             initial={{ opacity: 0 }}
@@ -1146,7 +1249,7 @@ export default function App() {
         )}
 
         {/* --- Onboarding Screen (Simplified) --- */}
-        {step === 'onboard' && (
+        {currentView === 'onboard' && (
           <motion.div 
             key="onboard"
             initial={{ opacity: 0, x: isRTL ? -100 : 100 }}
@@ -1166,7 +1269,7 @@ export default function App() {
               </div>
             </div>
             <div className="space-y-4">
-              <button onClick={() => setStep('auth')} className="btn-primary w-full" data-i18n="start_btn">
+              <button onClick={() => setCurrentView('auth')} className="btn-primary w-full" data-i18n="start_btn">
                 {t.start_btn}
               </button>
             </div>
@@ -1174,7 +1277,7 @@ export default function App() {
         )}
 
         {/* --- Authentication Screen --- */}
-        {step === 'auth' && (
+        {currentView === 'auth' && (
           <motion.div 
             key="auth"
             initial={{ opacity: 0, x: isRTL ? -100 : 100 }}
@@ -1185,7 +1288,7 @@ export default function App() {
             {/* Header with back button */}
             <div className="flex items-center gap-4 mb-4">
               <button 
-                onClick={() => setStep('onboard')}
+                onClick={() => setCurrentView('onboard')}
                 className="w-10 h-10 rounded-2xl bg-white flex items-center justify-center text-aiko-navy/40 hover:bg-aiko-teal-bg hover:text-aiko-teal transition-all shadow-sm"
               >
                 <ArrowLeft size={18} className={isRTL ? 'rotate-180' : ''} />
@@ -1223,23 +1326,16 @@ export default function App() {
                   />
                 )}
 
-                <div className="space-y-2">
-                  <label className="text-xs font-black uppercase tracking-widest text-aiko-navy/30 mx-2" data-i18n="phone_number">{t.phone_number}</label>
-                  <div className="flex items-center gap-3 bg-aiko-gray-100 p-4 rounded-2xl border border-transparent focus-within:border-aiko-teal focus-within:bg-white transition-all">
-                    <Phone size={18} className="text-aiko-navy/30" />
-                    <div className="flex items-center gap-2 pr-2 border-r border-aiko-navy/10">
-                      <span className="text-lg">🇩🇿</span>
-                      <span className="font-black text-aiko-navy">+213</span>
-                    </div>
-                    <input 
-                      type="tel" 
-                      placeholder="5 55 55 55 55" 
-                      value={phoneNumber}
-                      onChange={(e) => setPhoneNumber(e.target.value)}
-                      className="flex-1 bg-transparent border-none outline-none font-bold text-aiko-navy placeholder:text-aiko-navy/10"
-                    />
-                  </div>
-                </div>
+                <FormInput
+                  label={t.email_label}
+                  icon={Mail}
+                  type="email"
+                  placeholder="name@example.com"
+                  value={email}
+                  onChange={setEmail}
+                  i18nLabel="email_label"
+                  isRTL={isRTL}
+                />
 
                 <FormInput 
                   label={t.password_label} 
@@ -1292,10 +1388,18 @@ export default function App() {
                 )}
 
                 <button 
-                  onClick={() => setStep('role')}
-                  className="btn-primary w-full py-5 rounded-2xl shadow-xl shadow-aiko-teal/20 mt-4"
+                  onClick={authMode === 'login' ? handleLogin : handleRegister}
+                  disabled={isAuthLoading}
+                  className="btn-primary w-full py-5 rounded-2xl shadow-xl shadow-aiko-teal/20 mt-4 flex items-center justify-center gap-3"
                 >
-                  {authMode === 'login' ? (isRTL ? 'المتابعة عبر SMS' : 'Continue with SMS') : (isRTL ? 'إنشاء الحساب' : 'Create Account')}
+                  {isAuthLoading && (
+                    <motion.div
+                      animate={{ rotate: 360 }}
+                      transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                      className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full"
+                    />
+                  )}
+                  {authMode === 'login' ? (isRTL ? 'تسجيل الدخول' : 'Login') : (isRTL ? 'إنشاء الحساب' : 'Create Account')}
                 </button>
 
                 {authMode === 'login' && (
@@ -1343,7 +1447,7 @@ export default function App() {
         )}
 
         {/* --- Role Selection --- */}
-        {step === 'role' && (
+        {currentView === 'role' && (
           <motion.div 
             key="role"
             initial={{ opacity: 0, x: isRTL ? -100 : 100 }}
@@ -1386,7 +1490,7 @@ export default function App() {
             <div className="pt-8">
               <button 
                 disabled={!userRole}
-                onClick={() => setStep('dashboard')} 
+                onClick={() => setCurrentView('dashboard')}
                 className="btn-primary w-full disabled:grayscale disabled:opacity-50"
                 data-i18n="continue_btn"
               >
@@ -1397,7 +1501,7 @@ export default function App() {
         )}
 
         {/* --- Dashboard --- */}
-        {step === 'dashboard' && (
+        {currentView === 'dashboard' && (
           <motion.div 
             key="dashboard"
             initial={{ opacity: 0 }}
@@ -1576,7 +1680,7 @@ export default function App() {
                         <div className="relative">
                           <input 
                             type="text"
-                            placeholder={userRole === 'worker' ? (isRTL ? "ابحث عن وظيفة..." : "Search for a job...") : (isRTL ? "ابحث عن عامل..." : "Search for a worker...")}
+                            placeholder={(userRole as string) === 'worker' ? (isRTL ? "ابحث عن وظيفة..." : "Search for a job...") : (isRTL ? "ابحث عن عامل..." : "Search for a worker...")}
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                             className="w-full bg-white border-2 border-aiko-gray-100 rounded-[2rem] py-5 px-8 pr-14 text-sm font-bold text-aiko-navy focus:outline-none focus:border-aiko-teal transition-all shadow-sm"
@@ -1940,7 +2044,7 @@ export default function App() {
                                 <img src={review.avatar} className="w-12 h-12 rounded-2xl object-cover border-2 border-white shadow-sm" alt="Reviewer" />
                                 <div className="flex-1">
                                   <div className="flex items-center justify-between">
-                                    <h4 className="text-sm font-black text-aiko-navy">{review.name || review.user}</h4>
+                                    <h4 className="text-sm font-black text-aiko-navy">{(review as any).name || review.user}</h4>
                                     <span className="text-[10px] font-bold text-aiko-navy/30">{review.date}</span>
                                   </div>
                                   <div className="flex gap-0.5 text-aiko-orange mt-0.5">
@@ -1982,7 +2086,7 @@ export default function App() {
                         <SectionTitle title={isRTL ? "إعدادات إضافية" : "Additional Settings"} />
                         <div className="space-y-2">
                           {[
-                            { icon: Globe, label: t.language_setting, action: () => { (window as any).langFromProfile = true; setStep('lang'); } },
+                            { icon: Globe, label: t.language_setting, action: () => { (window as any).langFromProfile = true; setCurrentView('lang'); } },
                             { icon: Bell, label: t.nav_notif },
                             { icon: ShieldCheck, label: isRTL ? "الأمان والخصوصية" : "Security & Privacy" }
                           ].map((item, i) => (
@@ -2021,7 +2125,7 @@ export default function App() {
                           </div>
                           <ChevronRight size={18} className={isRTL ? 'rotate-180 text-white/30' : 'text-white/30'} />
                         </button>
-                        <button onClick={resetApp} className="w-full btn-orange py-5 uppercase tracking-widest flex items-center justify-center gap-3 shadow-huge">
+                        <button onClick={handleLogout} className="w-full btn-orange py-5 uppercase tracking-widest flex items-center justify-center gap-3 shadow-huge">
                           <Trash2 size={20} />
                           {t.logout}
                         </button>
