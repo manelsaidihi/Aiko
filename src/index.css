@@ -1,0 +1,51 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Noto+Sans+JP:wght@300;400;500;700&family=Cairo:wght@300;400;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Noto+Sans+JP:wght@300;400;500;700&family=Cairo:wght@300;400;600;700&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", "Noto Sans JP", "Cairo", ui-sans-serif, system-ui, sans-serif;
+  
+  --color-aiko-teal: #0FA3A3;      /* Main Teal */
+  --color-aiko-teal-light: #4DC8C8;
+  --color-aiko-teal-dark: #0A7878;
+  --color-aiko-teal-bg: #E0F5F5;
+  --color-aiko-orange: #F5A623;    /* Main Orange */
+  --color-aiko-orange-dark: #D4891A;
+  --color-aiko-orange-light: #FFF0D0;
+  --color-aiko-navy: #1A1A2E;      /* Background/Ink */
+  --color-aiko-gray-100: #F4F4F8;
+  --color-aiko-white: #FFFFFF;
+  --shadow-sm: 0 2px 8px rgba(15, 163, 163, 0.08);
+  --shadow-md: 0 8px 24px rgba(15, 163, 163, 0.14);
+}
+
+@layer base {
+  body {
+    @apply bg-aiko-gray-100 text-aiko-navy font-sans antialiased overflow-x-hidden selection:bg-aiko-teal selection:text-aiko-white;
+    background: 
+      radial-gradient(circle at top left, rgba(15, 163, 163, 0.05) 0%, transparent 50%),
+      radial-gradient(circle at bottom right, rgba(245, 166, 35, 0.08) 0%, transparent 50%),
+      #F4F4F8;
+  }
+}
+
+.bento-card {
+  @apply bg-white backdrop-blur-2xl border border-black/5 shadow-[0_8px_32px_-16px_rgba(15,163,163,0.1)] hover:shadow-[0_24px_48px_-12px_rgba(15,163,163,0.15)] transition-all duration-500 rounded-[32px] overflow-hidden;
+}
+
+.cinematic-glass {
+  @apply bg-white/70 backdrop-blur-3xl border border-white/40;
+}
+
+.btn-primary {
+  @apply bg-linear-to-br from-aiko-teal to-aiko-teal-dark text-white font-bold py-4 px-8 rounded-2xl shadow-[0_8px_20px_rgba(15,163,163,0.3)] hover:shadow-[0_12px_28px_rgba(15,163,163,0.4)] hover:-translate-y-0.5 active:scale-95 transition-all duration-300;
+}
+
+.btn-orange {
+  @apply bg-linear-to-br from-aiko-orange to-aiko-orange-dark text-white font-bold py-4 px-8 rounded-2xl shadow-[0_8px_20px_rgba(245,166,35,0.3)] hover:shadow-[0_12px_28px_rgba(245,166,35,0.4)] hover:-translate-y-0.5 active:scale-95 transition-all duration-300;
+}
+
+.input-field {
+  @apply w-full bg-white border-2 border-aiko-gray-100 rounded-2xl py-4 px-6 font-medium focus:border-aiko-teal outline-none transition-colors duration-300;
+}
+
