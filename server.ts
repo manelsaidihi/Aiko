@@ -4,6 +4,7 @@ import { Server } from "socket.io";
 import { createServer as createViteServer } from "vite";
 import path from "path";
 import authRoutes from "./src/routes/auth";
+import serviceRoutes from "./src/routes/services";
 
 async function startServer() {
   const app = express();
@@ -17,6 +18,8 @@ async function startServer() {
       origin: "*",
     },
   });
+
+  app.set("io", io);
 
   const PORT = 3000;
 
@@ -51,6 +54,7 @@ async function startServer() {
 
   // API Routes
   app.use("/api/auth", authRoutes);
+  app.use("/api/services", serviceRoutes);
 
   app.get("/api/health", (req, res) => {
     res.json({ status: "ok", service: "Aiko" });
