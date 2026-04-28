@@ -1,0 +1,70 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id              String           @id @default(uuid())
+  name            String
+  email           String           @unique
+  passwordHash    String
+  role            String           // "employer" or "worker"
+  skills          String[]
+  location        String?
+  rating          Float?
+  createdAt       DateTime         @default(now())
+
+  serviceRequests ServiceRequest[] @relation("EmployerRequests")
+  assignedTasks   ServiceRequest[] @relation("WorkerTasks")
+  sentMessages    Message[]        @relation("SentMessages")
+  receivedMessages Message[]       @relation("ReceivedMessages")
+  reviewsReceived Review[]         @relation("WorkerReviews")
+  reviewsGiven    Review[]         @relation("EmployerReviews")
+}
+
+model ServiceRequest {
+  id          String   @id @default(uuid())
+  title       String
+  description String
+  category    String
+  subcategory String?
+  location    String
+  budget      String
+  status      String   @default("open") // "open", "assigned", "completed"
+  employerId  String
+  workerId    String?
+  createdAt   DateTime @default(now())
+
+  employer    User     @relation("EmployerRequests", fields: [employerId], references: [id])
+  worker      User?    @relation("WorkerTasks", fields: [workerId], references: [id])
+  review      Review?
+}
+
+model Message {
+  id         String   @id @default(uuid())
+  senderId   String
+  receiverId String
+  text       String
+  timestamp  DateTime @default(now())
+  isRead     Boolean  @default(false)
+
+  sender     User     @relation("SentMessages", fields: [senderId], references: [id])
+  receiver   User     @relation("ReceivedMessages", fields: [receiverId], references: [id])
+}
+
+model Review {
+  id         String   @id @default(uuid())
+  workerId   String
+  employerId String
+  requestId  String   @unique
+  rating     Int
+  comment    String?
+  createdAt  DateTime @default(now())
+
+  worker     User           @relation("WorkerReviews", fields: [workerId], references: [id])
+  employer   User           @relation("EmployerReviews", fields: [employerId], references: [id])
+  request    ServiceRequest @relation(fields: [requestId], references: [id])
+}

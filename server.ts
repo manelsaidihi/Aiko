@@ -3,9 +3,14 @@ import { createServer } from "http";
 import { Server } from "socket.io";
 import { createServer as createViteServer } from "vite";
 import path from "path";
+import authRoutes from "./src/routes/auth";
 
 async function startServer() {
   const app = express();
+
+  // Middleware
+  app.use(express.json());
+
   const httpServer = createServer(app);
   const io = new Server(httpServer, {
     cors: {
@@ -45,6 +50,8 @@ async function startServer() {
   });
 
   // API Routes
+  app.use("/api/auth", authRoutes);
+
   app.get("/api/health", (req, res) => {
     res.json({ status: "ok", service: "Aiko" });
   });
