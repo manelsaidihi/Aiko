@@ -2,7 +2,6 @@
   "name": "aiko",
   "private": true,
   "version": "1.0.0",
-  "type": "module",
   "scripts": {
     "dev": "tsx server.ts",
     "build": "prisma generate && vite build && tsc --project tsconfig.server.json",
