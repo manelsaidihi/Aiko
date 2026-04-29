@@ -324,7 +324,10 @@ const translations = {
     omotenashi: 'أوموتيناشي',
     location: 'الجزائر العاصمة، باب الزوار',
     cat_all: 'الكل',
-    categories: 'التصنيفات'
+    categories: 'التصنيفات',
+    install_app: 'ثبّت التطبيق',
+    offline_msg: 'أنت الآن في وضع عدم الاتصال. بعض الميزات قد لا تكون متاحة.',
+    offline_error: 'لا يوجد اتصال بالإنترنت. يرجى المحقق من الشبكة وإعادة المحاولة.'
   },
   en: {
     email_label: 'Email Address',
@@ -407,7 +410,10 @@ const translations = {
     omotenashi: 'Omotenashi',
     location: 'Algiers, Bab Ezzouar',
     cat_all: 'All',
-    categories: 'Categories'
+    categories: 'Categories',
+    install_app: 'Install App',
+    offline_msg: 'You are currently offline. Some features may be unavailable.',
+    offline_error: 'No internet connection. Please check your network and try again.'
   },
   fr: {
     email_label: 'Adresse Email',
@@ -490,7 +496,10 @@ const translations = {
     omotenashi: 'Omotenashi',
     location: 'Alger, Bab Ezzouar',
     cat_all: 'Tout',
-    categories: 'Catégories'
+    categories: 'Catégories',
+    install_app: 'Installer',
+    offline_msg: 'Vous êtes actuellement hors ligne. Certaines fonctionnalités peuvent être indisponibles.',
+    offline_error: 'Pas de connexion Internet. Veuillez vérifier votre réseau et réessayer.'
   }
 };
 
@@ -808,6 +817,9 @@ export default function App() {
   const [showLocationModal, setShowLocationModal] = useState(false);
   const [contactTarget, setContactTarget] = useState<any>(null);
   const [activeItem, setActiveItem] = useState<any>(null);
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const [showInstallBtn, setShowInstallBtn] = useState(false);
+  const [isOffline, setIsOffline] = useState(!navigator.onLine);
   const [isAvailable, setIsAvailable] = useState(true);
   const [workerAvailability, setWorkerAvailability] = useState<any>(null);
   const [availableWorkers, setAvailableWorkers] = useState<any[]>([]);
@@ -1037,6 +1049,10 @@ export default function App() {
   };
 
   const handleSendMessage = () => {
+    if (isOffline) {
+      showToast(t.offline_error, 'error');
+      return;
+    }
     if (!newMessageText.trim() || !activeChatUser || !socket) return;
 
     socket.emit("send_message", {
@@ -1109,6 +1125,34 @@ export default function App() {
       }
     }
   }, [currentUser]);
+
+  useEffect(() => {
+    const handleBeforeInstallPrompt = (e: any) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+      setShowInstallBtn(true);
+    };
+
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    window.addEventListener('online', () => setIsOffline(false));
+    window.addEventListener('offline', () => setIsOffline(true));
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+      window.removeEventListener('online', () => setIsOffline(false));
+      window.removeEventListener('offline', () => setIsOffline(true));
+    };
+  }, []);
+
+  const handleInstallClick = async () => {
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    if (outcome === 'accepted') {
+      setShowInstallBtn(false);
+    }
+    setDeferredPrompt(null);
+  };
 
   useEffect(() => {
     const initAuth = async () => {
@@ -1817,6 +1861,21 @@ export default function App() {
             </div>
           </motion.div>
         )}
+
+      {/* Offline Banner */}
+      <AnimatePresence>
+        {isOffline && (
+          <motion.div
+            initial={{ y: -50, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: -50, opacity: 0 }}
+            className="fixed top-0 left-0 right-0 z-[10000] bg-aiko-orange text-white text-[10px] font-black py-2 px-4 flex items-center justify-center gap-2 shadow-lg"
+          >
+            <ShieldCheck size={14} />
+            {t.offline_msg}
+          </motion.div>
+        )}
+      </AnimatePresence>
 
         {/* --- Dashboard --- */}
         {currentView === 'dashboard' && (
@@ -2559,6 +2618,15 @@ export default function App() {
                           </div>
                           <ChevronRight size={18} className={isRTL ? 'rotate-180 text-white/30' : 'text-white/30'} />
                         </button>
+                        {showInstallBtn && (
+                          <button
+                            onClick={handleInstallClick}
+                            className="w-full py-5 rounded-[2rem] bg-aiko-teal-bg text-aiko-teal font-black text-sm uppercase tracking-widest hover:bg-aiko-teal/10 transition-all flex items-center justify-center gap-3"
+                          >
+                            <Plus size={20} />
+                            {t.install_app}
+                          </button>
+                        )}
                         <button onClick={handleLogout} className="w-full btn-orange py-5 uppercase tracking-widest flex items-center justify-center gap-3 shadow-huge">
                           <Trash2 size={20} />
                           {t.logout}
