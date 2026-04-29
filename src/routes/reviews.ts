@@ -1,6 +1,7 @@
 import { Router, Response } from 'express';
 import { prisma } from '../db';
 import { authenticateRequest, AuthRequest } from '../middleware/auth';
+import { sendNotification } from '../services/notificationService';
 
 const router = Router();
 
@@ -79,6 +80,16 @@ router.post('/', authenticateRequest, async (req: AuthRequest, res: Response) =>
       data: {
         rating: averageRating
       }
+    });
+
+    // Notify the worker
+    const io = req.app.get('io');
+    await sendNotification(io, {
+      userId: workerId,
+      type: 'new_review',
+      title: 'تقييم جديد',
+      body: `لقد تلقيت تقييماً جديداً (${rating} نجوم)`,
+      data: { reviewId: review.id, rating }
     });
 
     res.status(201).json(review);

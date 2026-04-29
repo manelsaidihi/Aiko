@@ -2,6 +2,7 @@ import { Router, Response } from 'express';
 import { prisma } from '../db';
 import { authenticateRequest, AuthRequest } from '../middleware/auth';
 import { categorizeService } from '../services/geminiService';
+import { sendNotification } from '../services/notificationService';
 
 const router = Router();
 
@@ -41,6 +42,27 @@ router.post('/', authenticateRequest, async (req: AuthRequest, res: Response) =>
     // أرسل socket event "new_request" لجميع العمال المتصلين
     const io = req.app.get('io');
     io.emit('new_request', serviceRequest);
+
+    // Notify workers in the same category
+    const workers = await prisma.user.findMany({
+      where: {
+        role: 'worker',
+        skills: {
+          has: category
+        }
+      },
+      select: { id: true }
+    });
+
+    for (const worker of workers) {
+      await sendNotification(io, {
+        userId: worker.id,
+        type: 'new_request',
+        title: 'طلب جديد في مجالك',
+        body: `هناك طلب جديد: ${refinedTitle}`,
+        data: { requestId: serviceRequest.id }
+      });
+    }
 
     res.status(201).json(serviceRequest);
   } catch (error) {
@@ -194,6 +216,15 @@ router.patch('/:id/assign', authenticateRequest, async (req: AuthRequest, res: R
     const io = req.app.get('io');
     io.emit('request_assigned', updatedService);
 
+    // Notify the employer
+    await sendNotification(io, {
+      userId: service.employerId,
+      type: 'request_assigned',
+      title: 'تم قبول طلبك!',
+      body: `قام أحد العمال بقبول طلبك: ${service.title}`,
+      data: { requestId: service.id, workerId: userId }
+    });
+
     res.json(updatedService);
   } catch (error) {
     console.error('Assign service error:', error);
@@ -228,6 +259,18 @@ router.patch('/:id/complete', authenticateRequest, async (req: AuthRequest, res:
     // يرسل socket event "request_completed"
     const io = req.app.get('io');
     io.emit('request_completed', updatedService);
+
+    // Notify the other party
+    const recipientId = userId === service.employerId ? service.workerId : service.employerId;
+    if (recipientId) {
+      await sendNotification(io, {
+        userId: recipientId,
+        type: 'request_completed',
+        title: 'تم إتمام الخدمة',
+        body: `تم وضع علامة "مكتمل" على الخدمة: ${service.title}`,
+        data: { requestId: service.id }
+      });
+    }
 
     res.json(updatedService);
   } catch (error) {
