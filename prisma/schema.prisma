@@ -16,6 +16,7 @@ model User {
   location        String?
   phone           String?
   bio             String?
+  avatar          String?
   portfolio       String[]
   rating          Float?
   createdAt       DateTime         @default(now())
