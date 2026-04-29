@@ -5,7 +5,16 @@
     "outDir": "dist",
     "esModuleInterop": true,
     "skipLibCheck": true,
-    "resolveJsonModule": true
+    "resolveJsonModule": true,
+    "strict": false,
+    "noImplicitAny": false
   },
-  "include": ["server.ts", "src/routes/**/*", "src/middleware/**/*", "src/services/**/*", "src/db.ts", "src/types.ts"]
+  "include": [
+    "server.ts",
+    "src/routes/**/*",
+    "src/middleware/**/*",
+    "src/services/**/*",
+    "src/db.ts",
+    "src/types.ts"
+  ]
 }
