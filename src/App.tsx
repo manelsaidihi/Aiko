@@ -411,7 +411,7 @@ const translations = {
     location: 'Algiers, Bab Ezzouar',
     cat_all: 'All',
     categories: 'Categories',
-    install_app: 'Install App',
+    install_app: 'Install',
     offline_msg: 'You are currently offline. Some features may be unavailable.',
     offline_error: 'No internet connection. Please check your network and try again.'
   },
