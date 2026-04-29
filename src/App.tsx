@@ -809,8 +809,11 @@ export default function App() {
   const [contactTarget, setContactTarget] = useState<any>(null);
   const [activeItem, setActiveItem] = useState<any>(null);
   const [isAvailable, setIsAvailable] = useState(true);
+  const [workerAvailability, setWorkerAvailability] = useState<any>(null);
+  const [availableWorkers, setAvailableWorkers] = useState<any[]>([]);
   const [showFilters, setShowFilters] = useState(false);
   const [showAvailabilityModal, setShowAvailabilityModal] = useState(false);
+  const [showWorkerAvailabilityForm, setShowWorkerAvailabilityForm] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [toast, setToast] = useState<{ message: string, type: 'success' | 'error' } | null>(null);
   const [isRTL, setIsRTL] = useState(lang === "ar");
@@ -851,6 +854,37 @@ export default function App() {
   });
 
   const [myRequests, setMyRequests] = useState<any[]>([]);
+
+  const fetchAvailableWorkers = async (filters: any = {}) => {
+    try {
+      const params = new URLSearchParams();
+      if (filters.category) params.append('category', filters.category);
+      if (filters.wilaya) params.append('wilaya', filters.wilaya);
+      const response = await fetch(`/api/availability?${params.toString()}`);
+      if (response.ok) {
+        const data = await response.json();
+        setAvailableWorkers(data.availabilities);
+      }
+    } catch (err) {
+      console.error("Error fetching available workers:", err);
+    }
+  };
+
+  const toggleAvailability = async () => {
+    try {
+      const response = await fetch("/api/availability/toggle", {
+        method: 'PATCH',
+        headers: { "Authorization": `Bearer ${authService.getToken()}` }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setIsAvailable(data.isAvailable);
+        showToast(isRTL ? "تم تحديث الحالة بنجاح" : "Status updated successfully");
+      }
+    } catch (err) {
+      console.error("Error toggling availability:", err);
+    }
+  };
 
   const initSocket = (token: string, userId: string) => {
     const newSocket = io(window.location.origin, {
@@ -1056,7 +1090,10 @@ export default function App() {
     if (activeTab === "activity" && currentUser) {
       fetchMyRequests();
     }
-  }, [activeTab, currentUser]);
+    if (activeTab === "feed" && currentUser && currentUser.role === "employer") {
+      fetchAvailableWorkers({ category: category !== 'all' ? category : undefined, wilaya: wilaya ? wilaya.split(' - ')[1] : undefined });
+    }
+  }, [activeTab, currentUser, category, wilaya]);
 
   useEffect(() => {
     if (currentUser) {
@@ -1084,6 +1121,19 @@ export default function App() {
           initSocket(token, user.id);
           setCurrentView('dashboard');
           fetchNotifications();
+
+          if (user.role === 'worker') {
+            const res = await fetch("/api/availability/me", {
+              headers: { "Authorization": `Bearer ${token}` }
+            });
+            if (res.ok) {
+              const data = await res.json();
+              if (data) {
+                setWorkerAvailability(data);
+                setIsAvailable(data.isAvailable);
+              }
+            }
+          }
         } catch (err) {
           authService.clearToken();
           setCurrentView('auth');
@@ -1858,7 +1908,7 @@ export default function App() {
                             </div>
                             <div 
                               className={`w-14 h-8 rounded-full relative p-1 cursor-pointer transition-colors duration-500 ${isAvailable ? 'bg-aiko-orange' : 'bg-white/20'}`} 
-                              onClick={() => setIsAvailable(!isAvailable)}
+                              onClick={toggleAvailability}
                             >
                               <motion.div 
                                 animate={{ x: isAvailable ? (isRTL ? 0 : 24) : (isRTL ? 24 : 0) }}
@@ -1867,6 +1917,13 @@ export default function App() {
                             </div>
                           </div>
                           <div className="flex gap-3 mt-8 overflow-x-auto no-scrollbar pb-2">
+                            <button
+                              onClick={() => setShowWorkerAvailabilityForm(true)}
+                              className="bg-white text-aiko-teal px-6 py-3 rounded-2xl text-xs font-black whitespace-nowrap hover:bg-aiko-teal-bg transition-all flex items-center gap-2 shadow-lg"
+                            >
+                              <Plus size={16} strokeWidth={3} />
+                              <span>{isRTL ? "أنا متاح للعمل" : "I'm available for work"}</span>
+                            </button>
                             {[
                               { icon: Zap, label: t.available_now, color: 'text-aiko-orange' },
                               { icon: Calendar, label: t.pending, color: 'text-blue-400' },
@@ -1976,10 +2033,10 @@ export default function App() {
                           </div>
                         </div>
 
-                        <h3 className="text-2xl font-black text-aiko-navy">{isRTL ? "تصفح العمال" : "Browse Workers"}</h3>
+                        <h3 className="text-2xl font-black text-aiko-navy">{isRTL ? "عمال متاحون" : "Available Workers"}</h3>
                         <div className="flex gap-3 overflow-x-auto no-scrollbar pb-2">
                            {[
-                              { label: isRTL ? 'الكل' : 'All', active: true, icon: Sun },
+                              { label: isRTL ? 'الكل' : 'All', active: category === 'all', icon: Sun },
                               { label: isRTL ? 'التوقيت' : 'Timing', active: false, icon: Clock },
                               { label: isRTL ? 'المكان' : 'Location', active: false, icon: MapPin },
                               { label: isRTL ? 'متاح الآن' : 'Available Now', active: false, icon: Zap },
@@ -1993,19 +2050,59 @@ export default function App() {
                       </div>
 
                       <div className="grid gap-4">
-                        {filteredWorkers.map(worker => (
-                          <WorkerCard 
-                            key={worker.id}
-                            {...worker}
-                            lang={lang}
-                            onOffer={() => handleOpenItem(worker)}
-                            onContact={() => {
-                              setContactTarget(worker);
-                              setShowContactModal(true);
-                            }}
-                          />
+                        {availableWorkers.map(avail => (
+                          <motion.div
+                            key={avail.id}
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            className="bento-card p-6 space-y-4 group hover:shadow-xl transition-all"
+                          >
+                            <div className="flex items-start justify-between">
+                              <div className="flex items-center gap-4">
+                                <div className="w-14 h-14 bg-aiko-teal-bg text-aiko-teal rounded-2xl flex items-center justify-center">
+                                  <UserIcon size={28} />
+                                </div>
+                                <div>
+                                  <h4 className="font-extrabold text-aiko-navy">{avail.worker.name}</h4>
+                                  <div className="flex items-center gap-1">
+                                    <Star size={12} fill="#F5A623" className="text-aiko-orange" />
+                                    <span className="text-[10px] font-black text-aiko-navy/30">{avail.worker.rating || "5.0"}</span>
+                                  </div>
+                                </div>
+                              </div>
+                              <div className="text-right">
+                                <p className="text-lg font-black text-aiko-teal">{avail.hourlyRate} DA/h</p>
+                                {avail.dailyRate && <p className="text-[10px] font-bold text-aiko-navy/30">{avail.dailyRate} DA/day</p>}
+                              </div>
+                            </div>
+
+                            <div className="space-y-2">
+                              <h5 className="font-black text-sm text-aiko-navy">{avail.title}</h5>
+                              <p className="text-xs font-medium text-aiko-navy/60 leading-relaxed line-clamp-2">
+                                {avail.description.substring(0, 100)}{avail.description.length > 100 ? '...' : ''}
+                              </p>
+                            </div>
+
+                            <div className="flex flex-wrap gap-2">
+                              {avail.wilayas.map((w: string) => (
+                                <span key={w} className="px-3 py-1 rounded-full bg-aiko-teal-bg text-aiko-teal-dark font-black text-[8px] uppercase tracking-widest border border-aiko-teal/10">
+                                  {w}
+                                </span>
+                              ))}
+                            </div>
+
+                            <div className="flex items-center gap-3 pt-2 border-t border-aiko-gray-100">
+                              <button
+                                onClick={() => handleOpenChat(avail.worker)}
+                                className="flex-1 bg-aiko-teal text-white py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-aiko-teal-dark transition-all flex items-center justify-center gap-2"
+                              >
+                                <MessageCircle size={14} />
+                                {isRTL ? "تواصل معه" : "Contact Him"}
+                              </button>
+                            </div>
+                          </motion.div>
                         ))}
-                        {filteredWorkers.length === 0 && (
+                        {availableWorkers.length === 0 && (
                           <div className="p-12 text-center text-aiko-navy/30 font-bold border-2 border-dashed border-aiko-gray-100 rounded-[32px]">
                             <Search className="mx-auto mb-4 opacity-20" size={48} />
                             {isRTL ? "لا يوجد عمال متاحون حالياً" : "No workers available currently"}
@@ -3098,6 +3195,156 @@ export default function App() {
                     {isRTL ? 'إلغاء' : 'Cancel'}
                   </button>
                 </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* --- Worker Availability Form Modal --- */}
+      <AnimatePresence>
+        {showWorkerAvailabilityForm && (
+          <div className="fixed inset-0 z-[200] flex items-center justify-center p-6">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowWorkerAvailabilityForm(false)}
+              className="absolute inset-0 bg-aiko-navy/60 backdrop-blur-md"
+            />
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.9, opacity: 0, y: 20 }}
+              className="relative w-full max-w-2xl bg-white rounded-[40px] p-8 shadow-2xl flex flex-col gap-6 max-h-[90vh] overflow-y-auto no-scrollbar"
+            >
+              <div className="flex items-center justify-between">
+                <h2 className="text-2xl font-black text-aiko-navy">{isRTL ? "إعلان التوفر" : "Work Availability"}</h2>
+                <button onClick={() => setShowWorkerAvailabilityForm(false)} className="p-2 bg-aiko-gray-100 rounded-xl text-aiko-navy/40 hover:text-aiko-navy transition-all"><X size={20} /></button>
+              </div>
+
+              <div className="space-y-6">
+                <FormInput
+                  label={isRTL ? "العنوان" : "Title"}
+                  placeholder={isRTL ? "مثال: كهربائي محترف بخبرة 5 سنوات" : "e.g. Professional Electrician with 5 years experience"}
+                  value={workerAvailability?.title || ""}
+                  onChange={(val: string) => setWorkerAvailability({...workerAvailability, title: val})}
+                  icon={Briefcase}
+                />
+
+                <FormSelect
+                  label={t.categories}
+                  icon={Grid}
+                  options={SERVICE_CATEGORIES.map(c => isRTL ? c.name_ar : c.name_en)}
+                  value={workerAvailability?.category || ""}
+                  onChange={(val: string) => {
+                    const cat = SERVICE_CATEGORIES.find(c => (isRTL ? c.name_ar : c.name_en) === val);
+                    setWorkerAvailability({...workerAvailability, category: cat?.id, subcategories: []});
+                  }}
+                />
+
+                <div className="space-y-2">
+                  <label className="text-xs font-black uppercase tracking-widest text-aiko-navy/30 mx-2">{isRTL ? "الوصف التفصيلي" : "Description"}</label>
+                  <textarea
+                    className="w-full bg-aiko-gray-100 p-4 rounded-2xl border-2 border-transparent focus:border-aiko-teal outline-none font-bold text-aiko-navy min-h-[100px] resize-none"
+                    value={workerAvailability?.description || ""}
+                    onChange={(e) => setWorkerAvailability({...workerAvailability, description: e.target.value})}
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <FormInput
+                    label={isRTL ? "السعر بالساعة (دج)" : "Hourly Rate (DA)"}
+                    type="number"
+                    value={workerAvailability?.hourlyRate || ""}
+                    onChange={(val: string) => setWorkerAvailability({...workerAvailability, hourlyRate: val})}
+                    icon={Clock}
+                  />
+                  <FormInput
+                    label={isRTL ? "السعر باليوم (دج)" : "Daily Rate (DA)"}
+                    type="number"
+                    value={workerAvailability?.dailyRate || ""}
+                    onChange={(val: string) => setWorkerAvailability({...workerAvailability, dailyRate: val})}
+                    icon={Sun}
+                  />
+                </div>
+
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-black uppercase tracking-widest text-aiko-navy/30 mx-2">
+                      {isRTL ? "الولايات المتاحة" : "Available Wilayas"}
+                    </label>
+                    <span className="text-[10px] font-black text-aiko-teal uppercase tracking-widest">
+                      {isRTL ? `تم اختيار ${workerAvailability?.wilayas?.length || 0} ولاية` : `${workerAvailability?.wilayas?.length || 0} wilayas selected`}
+                    </span>
+                  </div>
+
+                  <div className="flex gap-2 mb-4">
+                    <button
+                      onClick={() => setWorkerAvailability({...workerAvailability, wilayas: ALGERIA_WILAYAS.map(w => w.split(' - ')[1])})}
+                      className="px-4 py-2 rounded-xl bg-aiko-teal-bg text-aiko-teal font-black text-[10px] uppercase tracking-widest hover:bg-aiko-teal hover:text-white transition-all"
+                    >
+                      {isRTL ? "اختيار الكل" : "Select All"}
+                    </button>
+                    <button
+                      onClick={() => setWorkerAvailability({...workerAvailability, wilayas: []})}
+                      className="px-4 py-2 rounded-xl bg-aiko-gray-100 text-aiko-navy/40 font-black text-[10px] uppercase tracking-widest hover:bg-aiko-navy hover:text-white transition-all"
+                    >
+                      {isRTL ? "إلغاء الكل" : "Deselect All"}
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                    {ALGERIA_WILAYAS.map(w => {
+                      const name = w.split(' - ')[1];
+                      const isChecked = workerAvailability?.wilayas?.includes(name);
+                      return (
+                        <label key={w} className={`flex items-center gap-3 p-3 rounded-xl border-2 transition-all cursor-pointer ${isChecked ? 'bg-aiko-teal-bg border-aiko-teal text-aiko-teal-dark' : 'bg-white border-aiko-gray-100 text-aiko-navy/40 hover:border-aiko-teal/20'}`}>
+                          <input
+                            type="checkbox"
+                            className="hidden"
+                            checked={isChecked || false}
+                            onChange={() => {
+                              const currentWilayas = workerAvailability?.wilayas || [];
+                              const newWilayas = isChecked
+                                ? currentWilayas.filter((item: string) => item !== name)
+                                : [...currentWilayas, name];
+                              setWorkerAvailability({...workerAvailability, wilayas: newWilayas});
+                            }}
+                          />
+                          <div className={`w-4 h-4 rounded border-2 flex items-center justify-center ${isChecked ? 'bg-aiko-teal border-aiko-teal text-white' : 'border-aiko-gray-200'}`}>
+                            {isChecked && <CheckCircle2 size={10} strokeWidth={4} />}
+                          </div>
+                          <span className="text-xs font-bold truncate">{name}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <button
+                  onClick={async () => {
+                    try {
+                      const response = await fetch("/api/availability", {
+                        method: "POST",
+                        headers: {
+                          "Content-Type": "application/json",
+                          "Authorization": `Bearer ${authService.getToken()}`
+                        },
+                        body: JSON.stringify(workerAvailability)
+                      });
+                      if (response.ok) {
+                        showToast(isRTL ? "تم نشر الإعلان بنجاح" : "Advertisement published successfully");
+                        setShowWorkerAvailabilityForm(false);
+                      }
+                    } catch (err) {
+                      console.error("Error publishing availability:", err);
+                    }
+                  }}
+                  className="w-full py-5 rounded-[2rem] bg-aiko-teal text-white font-black text-sm uppercase tracking-widest hover:bg-aiko-teal-dark transition-all shadow-xl shadow-aiko-teal/20 mt-4"
+                >
+                  {isRTL ? "نشر الإعلان" : "Publish Advertisement"}
+                </button>
               </div>
             </motion.div>
           </div>
