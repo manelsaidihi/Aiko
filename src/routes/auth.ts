@@ -2,17 +2,14 @@ import { Router, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import { prisma } from '../db';
 import { generateToken, authenticateRequest, AuthRequest } from '../middleware/auth';
+import { registerValidation, loginValidation } from '../middleware/validate';
 
 const router = Router();
 
 // POST /api/auth/register
-router.post('/register', async (req, res) => {
+router.post('/register', registerValidation, async (req, res) => {
   try {
     const { name, email, password, role, phone } = req.body;
-
-    if (!name || !email || !password || !role) {
-      return res.status(400).json({ error: 'Missing required fields' });
-    }
 
     const existingUser = await prisma.user.findUnique({
       where: { email }
@@ -53,13 +50,9 @@ router.post('/register', async (req, res) => {
 });
 
 // POST /api/auth/login
-router.post('/login', async (req, res) => {
+router.post('/login', loginValidation, async (req, res) => {
   try {
     const { email, password } = req.body;
-
-    if (!email || !password) {
-      return res.status(400).json({ error: 'Email and password are required' });
-    }
 
     const user = await prisma.user.findUnique({
       where: { email }

@@ -2,11 +2,12 @@ import { Router, Response } from 'express';
 import { prisma } from '../db';
 import { authenticateRequest, AuthRequest } from '../middleware/auth';
 import { sendNotification } from '../services/notificationService';
+import { createReviewValidation } from '../middleware/validate';
 
 const router = Router();
 
 // POST /api/reviews (يتطلب auth - employer فقط)
-router.post('/', authenticateRequest, async (req: AuthRequest, res: Response) => {
+router.post('/', authenticateRequest, createReviewValidation, async (req: AuthRequest, res: Response) => {
   try {
     const { workerId, requestId, rating, comment } = req.body;
     const userId = req.user?.id;
@@ -14,14 +15,6 @@ router.post('/', authenticateRequest, async (req: AuthRequest, res: Response) =>
 
     if (userRole !== 'employer') {
       return res.status(403).json({ error: 'Only employers can leave reviews' });
-    }
-
-    if (!workerId || !requestId || !rating) {
-      return res.status(400).json({ error: 'Missing required fields' });
-    }
-
-    if (rating < 1 || rating > 5) {
-      return res.status(400).json({ error: 'Rating must be between 1 and 5' });
     }
 
     // التحقق من الطلب

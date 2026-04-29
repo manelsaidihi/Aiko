@@ -1,9 +1,11 @@
-import express from "express";
+import express, { Request, Response, NextFunction } from "express";
 import { createServer } from "http";
 import { Server } from "socket.io";
 import { createServer as createViteServer } from "vite";
 import path from "path";
-import jwt from "jsonwebtoken";
+import helmet from "helmet";
+import cors from "cors";
+import rateLimit from "express-rate-limit";
 import authRoutes from "./src/routes/auth";
 import serviceRoutes from "./src/routes/services";
 import messageRoutes from "./src/routes/messages";
@@ -11,20 +13,67 @@ import reviewRoutes from "./src/routes/reviews";
 import notificationRoutes from "./src/routes/notifications";
 import { prisma } from "./src/db";
 import { sendNotification } from "./src/services/notificationService";
-
-const JWT_SECRET = process.env.JWT_SECRET || "super-secret-key";
+import { errorHandler } from "./src/middleware/errorHandler";
+import { verifyToken } from "./src/middleware/auth";
 
 async function startServer() {
   const app = express();
 
-  // Middleware
-  app.use(express.json());
+  // Security Middleware
+  app.use(helmet());
+  app.use(cors({
+    origin: process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(',') : '*',
+    credentials: true
+  }));
+
+  // Rate Limiting
+  const globalLimiter = rateLimit({
+    windowMs: (parseInt(process.env.RATE_LIMIT_WINDOW || "15")) * 60 * 1000,
+    max: parseInt(process.env.RATE_LIMIT_MAX || "100"),
+    message: { error: true, message: "Too many requests from this IP, please try again later.", code: 429 }
+  });
+
+  const authLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 5,
+    message: { error: true, message: "Too many login/register attempts, please try again after 15 minutes.", code: 429 }
+  });
+
+  app.use("/api/", globalLimiter);
+  app.use("/api/auth/login", authLimiter);
+  app.use("/api/auth/register", authLimiter);
+
+  // Body Parsing
+  app.use(express.json({ limit: '10mb' }));
+
+  // JSON Error Handling
+  app.use((err: any, req: Request, res: Response, next: NextFunction) => {
+    if (err instanceof SyntaxError && 'body' in err) {
+      return res.status(400).json({ error: true, message: "Invalid JSON", code: 400 });
+    }
+    next(err);
+  });
 
   const httpServer = createServer(app);
   const io = new Server(httpServer, {
     cors: {
-      origin: "*",
+      origin: process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(',') : '*',
+      methods: ["GET", "POST"]
     },
+  });
+
+  // Socket Auth Middleware
+  io.use((socket, next) => {
+    const token = socket.handshake.auth.token;
+    if (!token) {
+      return next(new Error("Authentication error: Token missing"));
+    }
+    const decoded = verifyToken(token);
+    if (!decoded) {
+      return next(new Error("Authentication error: Invalid token"));
+    }
+    (socket as any).userId = decoded.id;
+    next();
   });
 
   app.set("io", io);
@@ -32,29 +81,15 @@ async function startServer() {
   const PORT = 3000;
 
   io.on("connection", (socket) => {
-    console.log("A user connected:", socket.id);
+    const userId = (socket as any).userId;
+    console.log(`User connected: ${userId} (${socket.id})`);
 
-    socket.on("join", (data) => {
-      const token = socket.handshake.auth.token || data?.token;
-      if (!token) return;
-
-      try {
-        const decoded = jwt.verify(token, JWT_SECRET) as any;
-        const userId = decoded.id;
-        socket.join(`user_${userId}`);
-        console.log(`User ${userId} joined their room`);
-      } catch (err) {
-        console.error("Auth error in socket join");
-      }
-    });
+    // Auto-join user to their private room
+    socket.join(`user_${userId}`);
 
     socket.on("send_message", async (data) => {
-      const token = socket.handshake.auth.token || data?.token;
-      if (!token) return;
-
       try {
-        const decoded = jwt.verify(token, JWT_SECRET) as any;
-        const senderId = decoded.id;
+        const senderId = userId;
         const { receiverId, text } = data;
 
         const message = await prisma.message.create({
@@ -87,12 +122,7 @@ async function startServer() {
     });
 
     socket.on("mark_read", async (data) => {
-      const token = socket.handshake.auth.token || data?.token;
-      if (!token) return;
-
       try {
-        const decoded = jwt.verify(token, JWT_SECRET) as any;
-        const userId = decoded.id;
         const { otherUserId } = data;
 
         await prisma.message.updateMany({
@@ -123,6 +153,9 @@ async function startServer() {
   app.get("/api/health", (req, res) => {
     res.json({ status: "ok", service: "Aiko" });
   });
+
+  // Global Error Handler
+  app.use(errorHandler);
 
   // Vite middleware for development
   if (process.env.NODE_ENV !== "production") {

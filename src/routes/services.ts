@@ -3,11 +3,12 @@ import { prisma } from '../db';
 import { authenticateRequest, AuthRequest } from '../middleware/auth';
 import { categorizeService } from '../services/geminiService';
 import { sendNotification } from '../services/notificationService';
+import { createServiceValidation } from '../middleware/validate';
 
 const router = Router();
 
 // POST /api/services (يتطلب auth - employer فقط)
-router.post('/', authenticateRequest, async (req: AuthRequest, res: Response) => {
+router.post('/', authenticateRequest, createServiceValidation, async (req: AuthRequest, res: Response) => {
   try {
     const { title, description, category, subcategory, location, budget, wilaya } = req.body;
     const userId = req.user?.id;
@@ -15,10 +16,6 @@ router.post('/', authenticateRequest, async (req: AuthRequest, res: Response) =>
 
     if (userRole !== 'employer') {
       return res.status(403).json({ error: 'Only employers can create service requests' });
-    }
-
-    if (!title || !description || !category || !location || !budget || !wilaya) {
-      return res.status(400).json({ error: 'Missing required fields' });
     }
 
     // استدع geminiService.categorizeService() لتحسين العنوان تلقائياً
