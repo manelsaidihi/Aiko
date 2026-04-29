@@ -823,6 +823,7 @@ export default function App() {
   const [isAvailable, setIsAvailable] = useState(true);
   const [workerAvailability, setWorkerAvailability] = useState<any>(null);
   const [availableWorkers, setAvailableWorkers] = useState<any[]>([]);
+  const [jobs, setJobs] = useState<any[]>([]);
   const [showFilters, setShowFilters] = useState(false);
   const [showAvailabilityModal, setShowAvailabilityModal] = useState(false);
   const [showWorkerAvailabilityForm, setShowWorkerAvailabilityForm] = useState(false);
@@ -848,6 +849,8 @@ export default function App() {
     email: "",
     phone: "",
     bio: "",
+    location: "",
+    avatar: "",
     portfolio: [] as string[]
   });
 
@@ -858,6 +861,15 @@ export default function App() {
   });
 
   const [showReviewModal, setShowReviewModal] = useState(false);
+  const [showPostJobModal, setShowPostJobModal] = useState(false);
+  const [serviceData, setServiceData] = useState({
+    title: '',
+    description: '',
+    category: '',
+    location: '',
+    budget: '',
+    wilaya: ''
+  });
   const [reviewData, setReviewData] = useState({
     workerId: '',
     requestId: '',
@@ -870,7 +882,7 @@ export default function App() {
   const fetchAvailableWorkers = async (filters: any = {}) => {
     try {
       const params = new URLSearchParams();
-      if (filters.category) params.append('category', filters.category);
+      if (filters.category && filters.category !== 'all') params.append('category', filters.category);
       if (filters.wilaya) params.append('wilaya', filters.wilaya);
       const response = await fetch(`/api/availability?${params.toString()}`);
       if (response.ok) {
@@ -879,6 +891,22 @@ export default function App() {
       }
     } catch (err) {
       console.error("Error fetching available workers:", err);
+    }
+  };
+
+  const fetchJobs = async (filters: any = {}) => {
+    try {
+      const params = new URLSearchParams();
+      if (filters.category && filters.category !== 'all') params.append('category', filters.category);
+      if (filters.wilaya) params.append('wilaya', filters.wilaya);
+      params.append('status', 'open');
+      const response = await fetch(`/api/services?${params.toString()}`);
+      if (response.ok) {
+        const data = await response.json();
+        setJobs(data.services);
+      }
+    } catch (err) {
+      console.error("Error fetching jobs:", err);
     }
   };
 
@@ -1012,6 +1040,31 @@ export default function App() {
     }
   };
 
+  const handleCreateService = async () => {
+    try {
+      const response = await fetch("/api/services", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${authService.getToken()}`
+        },
+        body: JSON.stringify(serviceData)
+      });
+      if (response.ok) {
+        showToast(isRTL ? "تم نشر الطلب بنجاح" : "Service request posted successfully");
+        setShowPostJobModal(false);
+        setServiceData({ title: '', description: '', category: '', location: '', budget: '', wilaya: '' });
+        fetchMyRequests();
+      } else {
+        const err = await response.json();
+        showToast(err.error || "Failed to post service", "error");
+      }
+    } catch (err) {
+      console.error("Error creating service:", err);
+      showToast("Error creating service", "error");
+    }
+  };
+
   const fetchChatHistory = async (userId: string) => {
     try {
       const token = authService.getToken();
@@ -1094,8 +1147,8 @@ export default function App() {
       setCurrentUser((prev: any) => ({ ...prev, ...updated }));
       setIsEditingProfile(false);
       showToast(isRTL ? "تم تحديث الملف الشخصي بنجاح" : "Profile updated successfully");
-    } catch (err) {
-      showToast(isRTL ? "فشل تحديث الملف الشخصي" : "Failed to update profile", "error");
+    } catch (err: any) {
+      showToast(err.message || (isRTL ? "فشل تحديث الملف الشخصي" : "Failed to update profile"), "error");
     }
   };
 
@@ -1106,8 +1159,13 @@ export default function App() {
     if (activeTab === "activity" && currentUser) {
       fetchMyRequests();
     }
-    if (activeTab === "feed" && currentUser && currentUser.role === "employer") {
-      fetchAvailableWorkers({ category: category !== 'all' ? category : undefined, wilaya: wilaya ? wilaya.split(' - ')[1] : undefined });
+    if (activeTab === "feed" && currentUser) {
+      const filters = { category: category !== 'all' ? category : undefined, wilaya: wilaya ? wilaya.split(' - ')[1] : undefined };
+      if (currentUser.role === "employer") {
+        fetchAvailableWorkers(filters);
+      } else {
+        fetchJobs(filters);
+      }
     }
   }, [activeTab, currentUser, category, wilaya]);
 
@@ -1118,6 +1176,8 @@ export default function App() {
         email: currentUser.email || "",
         phone: currentUser.phone || "",
         bio: currentUser.bio || "",
+        location: currentUser.location || "",
+        avatar: currentUser.avatar || "",
         portfolio: currentUser.portfolio || []
       });
       if (currentUser.role === 'worker') {
@@ -1254,16 +1314,19 @@ export default function App() {
     { id: 5, name: 'كريم قاصدي', skill: 'ميكانيكي سيارات ألمانية', rating: 4.6, price: '2500 DA/h', distance: '5.0 km', icon: Car, cat: 'automotive' },
   ];
 
-  const filteredJobs = jobsData.filter(j => 
-    (category === "all" || j.cat === category) &&
-    (j.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-     j.company.toLowerCase().includes(searchQuery.toLowerCase()) ||
-     j.location.toLowerCase().includes(searchQuery.toLowerCase()))
+  const filteredJobs = jobs.filter(j =>
+    j.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    j.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    j.category.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    j.location.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    j.wilaya.toLowerCase().includes(searchQuery.toLowerCase())
   );
-  const filteredWorkers = workersData.filter(w => 
-    (category === "all" || w.cat === category) &&
-    (w.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-     w.skill.toLowerCase().includes(searchQuery.toLowerCase()))
+  const filteredWorkers = availableWorkers.filter(avail =>
+    avail.worker.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    avail.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    avail.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    avail.category.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    avail.wilayas.some((w: string) => w.toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
   const applyTranslations = () => {
@@ -2036,7 +2099,13 @@ export default function App() {
                         {filteredJobs.map(job => (
                           <JobCard 
                             key={job.id}
-                            {...job}
+                            title={job.title}
+                            company={job.employer.name}
+                            location={job.wilaya}
+                            price={job.budget}
+                            time={new Date(job.createdAt).toLocaleDateString()}
+                            type={job.category}
+                            icon={SERVICE_CATEGORIES.find(c => c.id === job.category)?.icon || Hammer}
                             lang={lang}
                             onApply={() => handleOpenItem(job)}
                             onContact={() => {
@@ -2068,7 +2137,10 @@ export default function App() {
                                <Zap size={14} fill="currentColor" />
                                {isRTL ? "طلب فوري" : "Instant Request"}
                             </button>
-                            <button className="flex-1 bg-white text-[#D4891A] font-black uppercase tracking-widest text-[10px] py-4 rounded-2xl flex items-center justify-center gap-2 shadow-xl hover:scale-105 transition-all">
+                            <button
+                              onClick={() => setShowPostJobModal(true)}
+                              className="flex-1 bg-white text-[#D4891A] font-black uppercase tracking-widest text-[10px] py-4 rounded-2xl flex items-center justify-center gap-2 shadow-xl hover:scale-105 transition-all"
+                            >
                                <Bell size={14} fill="currentColor" />
                                {isRTL ? "نشر وظيفة" : "Post Job"}
                             </button>
@@ -2125,7 +2197,7 @@ export default function App() {
                       </div>
 
                       <div className="grid gap-4">
-                        {availableWorkers.map(avail => (
+                        {filteredWorkers.map(avail => (
                           <motion.div
                             key={avail.id}
                             initial={{ opacity: 0, y: 20 }}
@@ -2379,7 +2451,7 @@ export default function App() {
                         <div className="relative group">
                           <div className="w-32 h-32 bg-aiko-teal-bg rounded-[3rem] overflow-hidden border-4 border-white shadow-xl flex items-center justify-center text-aiko-teal">
                             <img 
-                              src={`https://images.unsplash.com/photo-${userRole === 'worker' ? '1507003211169-0a1dd7228f2d' : '1438761681033-6461ffad8d80'}?w=200&h=200&fit=crop`} 
+                              src={profileData.avatar || `https://images.unsplash.com/photo-${userRole === 'worker' ? '1507003211169-0a1dd7228f2d' : '1438761681033-6461ffad8d80'}?w=200&h=200&fit=crop`}
                               className="w-full h-full object-cover" 
                               alt="Profile" 
                             />
@@ -2387,9 +2459,24 @@ export default function App() {
                               <Camera className="text-white" size={32} />
                             </div>
                           </div>
-                          <button className="absolute bottom-1 right-1 w-10 h-10 bg-aiko-orange text-white rounded-2xl border-4 border-white shadow-lg flex items-center justify-center hover:scale-110 transition-transform">
+                          <label className="absolute bottom-1 right-1 w-10 h-10 bg-aiko-orange text-white rounded-2xl border-4 border-white shadow-lg flex items-center justify-center hover:scale-110 transition-transform cursor-pointer">
                             <Camera size={20} />
-                          </button>
+                            <input
+                              type="file"
+                              className="hidden"
+                              accept="image/*"
+                              onChange={(e) => {
+                                const file = e.target.files?.[0];
+                                if (file) {
+                                  const reader = new FileReader();
+                                  reader.onloadend = () => {
+                                    setProfileData({...profileData, avatar: reader.result as string});
+                                  };
+                                  reader.readAsDataURL(file);
+                                }
+                              }}
+                            />
+                          </label>
                         </div>
                         <p className="text-[10px] font-black text-aiko-navy/30 uppercase tracking-widest">{isRTL ? 'تغيير الصورة' : 'Change Photo'}</p>
                       </div>
@@ -2423,15 +2510,11 @@ export default function App() {
                             onChange={(e: any) => setProfileData({...profileData, bio: e.target.value})}
                           />
                         </div>
-                        <FormSelect 
-                          label={isRTL ? "التصنيف الرئيسي" : "Main Category"} 
-                          icon={Grid} 
-                          options={categories.map(c => c.label)}
-                          value={categories.find(c => c.id === category)?.label || ''}
-                          onChange={(val: string) => {
-                            const cat = categories.find(c => c.label === val);
-                            if (cat) setCategory(cat.id);
-                          }}
+                        <FormInput
+                          label={isRTL ? "الموقع" : "Location"}
+                          icon={MapPin}
+                          value={profileData.location}
+                          onChange={(val: string) => setProfileData({...profileData, location: val})}
                         />
                       </div>
 
@@ -2456,7 +2539,7 @@ export default function App() {
                         <div className="absolute inset-0 bg-gradient-to-br from-aiko-teal/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
                         <div className="w-28 h-28 bg-aiko-teal-bg rounded-[2.5rem] mx-auto mb-6 flex items-center justify-center p-1 border-4 border-white shadow-xl relative z-10 group cursor-pointer overflow-hidden">
                           <img 
-                            src={`https://images.unsplash.com/photo-${userRole === 'worker' ? '1507003211169-0a1dd7228f2d' : '1438761681033-6461ffad8d80'}?w=200&h=200&fit=crop`} 
+                            src={profileData.avatar || `https://images.unsplash.com/photo-${userRole === 'worker' ? '1507003211169-0a1dd7228f2d' : '1438761681033-6461ffad8d80'}?w=200&h=200&fit=crop`}
                             className="w-full h-full rounded-[2rem] object-cover transition-transform group-hover:scale-110" 
                             alt="Profile" 
                           />
@@ -2467,7 +2550,7 @@ export default function App() {
                         <h3 className="text-2xl font-black text-aiko-navy mb-2 relative z-10">{profileData.name}</h3>
                         <div className="flex items-center justify-center gap-2 text-aiko-teal font-black text-sm mb-4 relative z-10">
                           <MapPin size={16} />
-                          <span>{wilaya ? `${wilaya.split(' - ')[1]}, ${commune}` : (isRTL ? 'الجزائر العاصمة' : 'Algiers Center')}</span>
+                          <span>{profileData.location || (isRTL ? 'الجزائر العاصمة' : 'Algiers Center')}</span>
                         </div>
                         <div className="flex justify-center gap-8 relative z-10">
                           <div className="text-center group/stat cursor-pointer">
@@ -2910,6 +2993,92 @@ export default function App() {
                         {isRTL ? "إرسال التقييم" : "Submit Review"}
                       </button>
                     </div>
+                  </motion.div>
+                </div>
+              )}
+            </AnimatePresence>
+
+            {/* Post Job Modal */}
+            <AnimatePresence>
+              {showPostJobModal && (
+                <div className="fixed inset-0 z-[300] flex items-center justify-center p-6">
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    onClick={() => setShowPostJobModal(false)}
+                    className="absolute inset-0 bg-aiko-navy/60 backdrop-blur-md"
+                  />
+                  <motion.div
+                    initial={{ scale: 0.9, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    exit={{ scale: 0.9, opacity: 0 }}
+                    className="relative w-full max-w-lg bg-white rounded-[40px] p-8 shadow-2xl flex flex-col gap-6 max-h-[90vh] overflow-y-auto no-scrollbar"
+                  >
+                    <div className="flex items-center justify-between">
+                      <h2 className="text-2xl font-black text-aiko-navy">{isRTL ? "نشر طلب خدمة" : "Post Service Request"}</h2>
+                      <button onClick={() => setShowPostJobModal(false)} className="p-2 bg-aiko-gray-100 rounded-xl text-aiko-navy/40 hover:text-aiko-navy transition-all"><X size={20} /></button>
+                    </div>
+
+                    <div className="space-y-4">
+                      <FormInput
+                        label={isRTL ? "العنوان" : "Title"}
+                        placeholder={isRTL ? "مثال: مطلوب سباك لإصلاح تسريب" : "e.g. Need a plumber for leak repair"}
+                        value={serviceData.title}
+                        onChange={(val: string) => setServiceData({...serviceData, title: val})}
+                        icon={Briefcase}
+                      />
+
+                      <FormSelect
+                        label={t.categories}
+                        icon={Grid}
+                        options={SERVICE_CATEGORIES.map(c => isRTL ? c.name_ar : c.name_en)}
+                        value={SERVICE_CATEGORIES.find(c => c.id === serviceData.category)?.[isRTL ? 'name_ar' : 'name_en'] || ""}
+                        onChange={(val: string) => {
+                          const cat = SERVICE_CATEGORIES.find(c => (isRTL ? c.name_ar : c.name_en) === val);
+                          setServiceData({...serviceData, category: cat?.id || ''});
+                        }}
+                      />
+
+                      <div className="space-y-2">
+                        <label className="text-xs font-black uppercase tracking-widest text-aiko-navy/30 mx-2">{isRTL ? "الوصف" : "Description"}</label>
+                        <textarea
+                          className="w-full bg-aiko-gray-100 p-4 rounded-2xl border-2 border-transparent focus:border-aiko-teal outline-none font-bold text-aiko-navy min-h-[100px] resize-none"
+                          value={serviceData.description}
+                          onChange={(e) => setServiceData({...serviceData, description: e.target.value})}
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4">
+                        <FormSelect
+                          label={t.wilaya_label}
+                          icon={MapPin}
+                          options={ALGERIA_WILAYAS}
+                          value={serviceData.wilaya}
+                          onChange={(val: string) => setServiceData({...serviceData, wilaya: val})}
+                        />
+                        <FormInput
+                          label={isRTL ? "الميزانية" : "Budget"}
+                          value={serviceData.budget}
+                          onChange={(val: string) => setServiceData({...serviceData, budget: val})}
+                          icon={Sparkles}
+                        />
+                      </div>
+
+                      <FormInput
+                        label={isRTL ? "الموقع التفصيلي" : "Detailed Location"}
+                        value={serviceData.location}
+                        onChange={(val: string) => setServiceData({...serviceData, location: val})}
+                        icon={MapPin}
+                      />
+                    </div>
+
+                    <button
+                      onClick={handleCreateService}
+                      className="w-full py-5 rounded-[2rem] bg-aiko-teal text-white font-black text-sm uppercase tracking-widest hover:bg-aiko-teal-dark transition-all shadow-xl shadow-aiko-teal/20 mt-4"
+                    >
+                      {isRTL ? "نشر الطلب" : "Post Request"}
+                    </button>
                   </motion.div>
                 </div>
               )}

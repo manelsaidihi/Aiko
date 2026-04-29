@@ -100,6 +100,7 @@ router.get('/me', authenticateRequest, async (req: AuthRequest, res) => {
         location: true,
         phone: true,
         bio: true,
+        avatar: true,
         portfolio: true,
         rating: true,
         createdAt: true
@@ -121,7 +122,7 @@ router.get('/me', authenticateRequest, async (req: AuthRequest, res) => {
 router.patch('/profile', authenticateRequest, async (req: AuthRequest, res) => {
   try {
     const userId = req.user?.id;
-    const { name, email, phone, bio, portfolio } = req.body;
+    const { name, email, phone, bio, location, avatar, portfolio } = req.body;
 
     const updatedUser = await prisma.user.update({
       where: { id: userId },
@@ -130,6 +131,8 @@ router.patch('/profile', authenticateRequest, async (req: AuthRequest, res) => {
         email,
         phone,
         bio,
+        location,
+        avatar,
         portfolio
       }
     });
@@ -141,6 +144,8 @@ router.patch('/profile', authenticateRequest, async (req: AuthRequest, res) => {
       role: updatedUser.role,
       phone: updatedUser.phone,
       bio: updatedUser.bio,
+      location: updatedUser.location,
+      avatar: updatedUser.avatar,
       portfolio: updatedUser.portfolio
     });
   } catch (error) {
