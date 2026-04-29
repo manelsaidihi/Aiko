@@ -1,0 +1,11 @@
+{
+  "compilerOptions": {
+    "module": "commonjs",
+    "target": "es2020",
+    "outDir": "dist",
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true
+  },
+  "include": ["server.ts", "src/routes/**/*", "src/middleware/**/*", "src/services/**/*", "src/db.ts", "src/types.ts"]
+}
