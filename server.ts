@@ -6,6 +6,7 @@ import path from "path";
 import helmet from "helmet";
 import cors from "cors";
 import rateLimit from "express-rate-limit";
+import compression from "compression";
 import authRoutes from "./src/routes/auth";
 import serviceRoutes from "./src/routes/services";
 import messageRoutes from "./src/routes/messages";
@@ -18,6 +19,9 @@ import { verifyToken } from "./src/middleware/auth";
 
 async function startServer() {
   const app = express();
+
+  // Compression
+  app.use(compression());
 
   // Security Middleware
   app.use(helmet());
@@ -78,7 +82,7 @@ async function startServer() {
 
   app.set("io", io);
 
-  const PORT = 3000;
+  const PORT = process.env.PORT || 3000;
 
   io.on("connection", (socket) => {
     const userId = (socket as any).userId;
@@ -165,14 +169,21 @@ async function startServer() {
     });
     app.use(vite.middlewares);
   } else {
-    const distPath = path.join(process.cwd(), "dist");
-    app.use(express.static(distPath));
+    const publicPath = path.join(process.cwd(), "dist", "public");
+    app.use(express.static(publicPath, {
+      maxAge: '1y',
+      setHeaders: (res, filePath) => {
+        if (filePath.endsWith('.html')) {
+          res.setHeader('Cache-Control', 'no-cache');
+        }
+      }
+    }));
     app.get("*", (req, res) => {
-      res.sendFile(path.join(distPath, "index.html"));
+      res.sendFile(path.join(publicPath, "index.html"));
     });
   }
 
-  httpServer.listen(PORT, "0.0.0.0", () => {
+  httpServer.listen(Number(PORT), "0.0.0.0", () => {
     console.log(`Aiko server running on http://localhost:${PORT}`);
   });
 }
