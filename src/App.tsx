@@ -803,7 +803,7 @@ export default function App() {
   const [chatMessages, setChatMessages] = useState<any[]>([]);
   const [newMessageText, setNewMessageText] = useState("");
   const [showNotification, setShowNotification] = useState(false);
-  const [notifications, setNotifications] = useState(MOCK_NOTIFICATIONS);
+  const [notifications, setNotifications] = useState<any[]>([]);
   const [showContactModal, setShowContactModal] = useState(false);
   const [showLocationModal, setShowLocationModal] = useState(false);
   const [contactTarget, setContactTarget] = useState<any>(null);
@@ -873,6 +873,36 @@ export default function App() {
       }
     } catch (err) {
       console.error("Error fetching conversations:", err);
+    }
+  };
+
+  const fetchNotifications = async () => {
+    try {
+      const token = authService.getToken();
+      const response = await fetch("/api/notifications", {
+        headers: { "Authorization": `Bearer ${token}` }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setNotifications(data);
+      }
+    } catch (err) {
+      console.error("Error fetching notifications:", err);
+    }
+  };
+
+  const markAllAsRead = async () => {
+    try {
+      const token = authService.getToken();
+      const response = await fetch("/api/notifications/read-all", {
+        method: 'PATCH',
+        headers: { "Authorization": `Bearer ${token}` }
+      });
+      if (response.ok) {
+        setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
+      }
+    } catch (err) {
+      console.error("Error marking notifications as read:", err);
     }
   };
 
@@ -1053,6 +1083,7 @@ export default function App() {
           setUserRole(user.role);
           initSocket(token, user.id);
           setCurrentView('dashboard');
+          fetchNotifications();
         } catch (err) {
           authService.clearToken();
           setCurrentView('auth');
@@ -1083,9 +1114,17 @@ export default function App() {
       fetchConversations();
     });
 
+    socket.on("notification", (notification) => {
+      setNotifications(prev => [notification, ...prev]);
+      if (notification.type === 'new_message') {
+        fetchConversations();
+      }
+    });
+
     return () => {
       socket.off("new_message");
       socket.off("message_sent");
+      socket.off("notification");
     };
   }, [socket, activeChatUser]);
 
@@ -1748,13 +1787,18 @@ export default function App() {
                     <UserIcon size={20} />
                   </button>
                   <button 
-                    onClick={() => setShowNotification(!showNotification)}
+                    onClick={() => {
+                      setShowNotification(!showNotification);
+                      if (!showNotification) {
+                        fetchNotifications();
+                      }
+                    }}
                     className={`w-10 h-10 rounded-2xl flex items-center justify-center transition-all relative ${showNotification ? 'bg-aiko-orange text-white shadow-lg' : 'bg-aiko-gray-100 text-aiko-navy/40'}`}
                   >
                     <Bell size={20} />
-                    {notifications.filter(n => !n.read).length > 0 && (
+                    {notifications.filter(n => !n.isRead).length > 0 && (
                       <span className="absolute -top-1 -right-1 w-4 h-4 bg-aiko-orange text-white text-[8px] font-black rounded-full border-2 border-white flex items-center justify-center">
-                        {notifications.filter(n => !n.read).length}
+                        {notifications.filter(n => !n.isRead).length}
                       </span>
                     )}
                   </button>
@@ -2531,11 +2575,11 @@ export default function App() {
                           <h2 className="text-3xl font-black text-aiko-navy">{isRTL ? 'الإشعارات' : 'Notifications'}</h2>
                         </div>
                         <button 
-                          onClick={() => setNotifications([])}
-                          className="w-12 h-12 rounded-2xl bg-red-50 text-red-500 flex items-center justify-center hover:bg-red-500 hover:text-white transition-all active:scale-95"
-                          title={isRTL ? 'مسح الكل' : 'Clear All'}
+                          onClick={markAllAsRead}
+                          className="w-12 h-12 rounded-2xl bg-aiko-teal-bg text-aiko-teal flex items-center justify-center hover:bg-aiko-teal hover:text-white transition-all active:scale-95"
+                          title={isRTL ? 'تحديد كتم قراءته' : 'Mark all as read'}
                         >
-                          <Trash2 size={24} />
+                          <CheckCircle2 size={24} />
                         </button>
                       </div>
 
@@ -2547,39 +2591,51 @@ export default function App() {
                             animate={{ opacity: 1, x: 0 }}
                             transition={{ delay: idx * 0.1 }}
                             onClick={() => {
-                              const newNotifs = notifications.map(n => n.id === notif.id ? { ...n, read: true } : n);
-                              setNotifications(newNotifs);
+                              // Mark as read locally and perform action
+                              setNotifications(notifications.map(n => n.id === notif.id ? { ...n, isRead: true } : n));
+
+                              if (notif.type === 'new_message' && notif.data?.senderId) {
+                                setShowNotification(false);
+                                setActiveTab('chat');
+                                handleOpenChat({ id: notif.data.senderId, name: 'User' }); // Minimal mock
+                              } else if (notif.type === 'new_request' || notif.type === 'request_assigned' || notif.type === 'request_completed') {
+                                setShowNotification(false);
+                                setActiveTab('activity');
+                              } else if (notif.type === 'new_review') {
+                                setShowNotification(false);
+                                setActiveTab('profile');
+                              }
                             }}
-                            className={`p-6 rounded-[2.5rem] bg-white shadow-sm border-2 transition-all relative group flex items-center gap-5 cursor-pointer ${!notif.read ? 'border-aiko-teal shadow-xl shadow-aiko-teal/5' : 'border-transparent hover:border-aiko-teal/20'}`}
+                            className={`p-6 rounded-[2.5rem] bg-white shadow-sm border-2 transition-all relative group flex items-center gap-5 cursor-pointer ${!notif.isRead ? 'border-aiko-teal shadow-xl shadow-aiko-teal/5' : 'border-transparent hover:border-aiko-teal/20'}`}
                           >
-                            {!notif.read && (
+                            {!notif.isRead && (
                               <div className={`absolute top-1/2 -translate-y-1/2 ${isRTL ? 'right-2' : 'left-2'} w-2 h-2 bg-aiko-teal rounded-full shadow-lg shadow-aiko-teal/40 animate-pulse`} />
                             )}
                             
                             <div className={`flex-shrink-0 w-16 h-16 rounded-3xl flex items-center justify-center transition-transform group-hover:scale-110 ${
-                              notif.type === 'instant' ? 'bg-orange-100 text-orange-500' :
-                              notif.type === 'job' ? 'bg-yellow-100 text-yellow-600' :
-                              notif.type === 'accepted' ? 'bg-green-100 text-green-500' :
+                              notif.type === 'new_request' ? 'bg-orange-100 text-orange-500' :
+                              notif.type === 'new_message' ? 'bg-blue-100 text-blue-600' :
+                              notif.type === 'request_assigned' || notif.type === 'request_completed' ? 'bg-green-100 text-green-500' :
                               'bg-purple-100 text-purple-500'
                             }`}>
-                              {notif.type === 'instant' && <Zap size={28} fill="currentColor" />}
-                              {notif.type === 'job' && <Bell size={28} fill="currentColor" />}
-                              {notif.type === 'accepted' && <CheckCircle2 size={28} />}
-                              {notif.type === 'rating' && <Star size={28} fill="currentColor" />}
+                              {notif.type === 'new_request' && <Zap size={28} fill="currentColor" />}
+                              {notif.type === 'new_message' && <MessageCircle size={28} />}
+                              {(notif.type === 'request_assigned' || notif.type === 'request_completed') && <CheckCircle2 size={28} />}
+                              {notif.type === 'new_review' && <Star size={28} fill="currentColor" />}
                             </div>
 
                             <div className="flex-1 space-y-1.5 overflow-hidden">
                               <h4 className="text-lg font-black text-aiko-navy truncate leading-tight">
-                                {isRTL ? notif.title_ar : notif.title_en}
+                                {notif.title}
                               </h4>
                               <p className="text-xs font-bold text-aiko-navy/40 leading-relaxed line-clamp-2">
-                                {isRTL ? notif.desc_ar : notif.desc_en}
+                                {notif.body}
                               </p>
                               <div className="flex items-center gap-3 pt-1">
                                 <span className="text-[10px] font-black text-aiko-orange uppercase tracking-widest bg-aiko-orange/10 px-2 py-0.5 rounded-full">
-                                  {isRTL ? notif.time_ar : notif.time_en}
+                                  {new Date(notif.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                 </span>
-                                {!notif.read && (
+                                {!notif.isRead && (
                                   <span className="text-[10px] font-black text-aiko-teal uppercase tracking-widest bg-aiko-teal-bg px-2 py-0.5 rounded-full">
                                     {isRTL ? "جديد" : "NEW"}
                                   </span>
