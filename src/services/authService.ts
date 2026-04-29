@@ -68,6 +68,28 @@ export const authService = {
     return user;
   },
 
+  async updateProfile(data: any): Promise<any> {
+    const token = this.getToken();
+    const response = await fetch('/api/auth/profile', {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify(data),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Update failed');
+    }
+
+    const updatedUser = await response.json();
+    const currentUser = this.getCurrentUser();
+    localStorage.setItem('aiko_user', JSON.stringify({ ...currentUser, ...updatedUser }));
+    return updatedUser;
+  },
+
   logout(): void {
     this.clearToken();
   },
