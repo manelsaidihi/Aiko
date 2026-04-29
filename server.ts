@@ -1,4 +1,5 @@
 import express, { Request, Response, NextFunction } from "express";
+import { execSync } from "child_process";
 import { createServer } from "http";
 import { Server } from "socket.io";
 import { createServer as createViteServer } from "vite";
@@ -19,6 +20,17 @@ import { errorHandler } from "./src/middleware/errorHandler";
 import { verifyToken } from "./src/middleware/auth";
 
 async function startServer() {
+  // Sync database schema for Render deployment
+  if (process.env.NODE_ENV === 'production') {
+    try {
+      console.log('Syncing database schema...');
+      execSync('npx prisma db push --accept-data-loss', { stdio: 'inherit' });
+      console.log('Database synced successfully');
+    } catch (error) {
+      console.error('Database sync failed:', error);
+    }
+  }
+
   const app = express();
 
   // Compression
