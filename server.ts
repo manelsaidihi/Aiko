@@ -12,6 +12,7 @@ import serviceRoutes from "./src/routes/services";
 import messageRoutes from "./src/routes/messages";
 import reviewRoutes from "./src/routes/reviews";
 import notificationRoutes from "./src/routes/notifications";
+import availabilityRoutes from "./src/routes/availability";
 import { prisma } from "./src/db";
 import { sendNotification } from "./src/services/notificationService";
 import { errorHandler } from "./src/middleware/errorHandler";
@@ -153,6 +154,7 @@ async function startServer() {
   app.use("/api/messages", messageRoutes);
   app.use("/api/reviews", reviewRoutes);
   app.use("/api/notifications", notificationRoutes);
+  app.use("/api/availability", availabilityRoutes);
 
   app.get("/api/health", (req, res) => {
     res.json({ status: "ok", service: "Aiko" });
