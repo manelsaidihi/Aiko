@@ -157,7 +157,7 @@ async function startServer() {
   app.use("/api/availability", availabilityRoutes);
 
   app.get("/api/health", (req, res) => {
-    res.json({ status: "ok", service: "Aiko" });
+    res.json({ status: "ok" });
   });
 
   // Global Error Handler

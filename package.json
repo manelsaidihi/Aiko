@@ -1,15 +1,12 @@
 {
-  "name": "react-example",
+  "name": "aiko",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
   "type": "module",
   "scripts": {
     "dev": "tsx server.ts",
-    "build": "prisma generate && vite build && tsc server.ts --outDir dist --module ESNext --moduleResolution bundler --target ES2022 --esModuleInterop --skipLibCheck --allowJs --noEmit false",
-    "build:full": "npm run build",
+    "build": "prisma generate && vite build",
     "start": "node dist/server.js",
-    "preview": "vite preview",
-    "clean": "rm -rf dist",
     "lint": "tsc --noEmit",
     "db:migrate": "prisma migrate dev",
     "db:generate": "prisma generate"
