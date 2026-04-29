@@ -1750,7 +1750,7 @@ export default function App() {
                 )}
 
                 <button 
-                  onClick={authMode === 'login' ? handleLogin : handleRegister}
+                  onClick={authMode === 'login' ? handleLogin : () => setCurrentView('role')}
                   disabled={isAuthLoading}
                   className="btn-primary w-full py-5 rounded-2xl shadow-xl shadow-aiko-teal/20 mt-4 flex items-center justify-center gap-3"
                 >
@@ -1761,7 +1761,7 @@ export default function App() {
                       className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full"
                     />
                   )}
-                  {authMode === 'login' ? (isRTL ? 'تسجيل الدخول' : 'Login') : (isRTL ? 'إنشاء الحساب' : 'Create Account')}
+                  {authMode === 'login' ? (isRTL ? 'تسجيل الدخول' : 'Login') : (isRTL ? 'التالي' : 'Next')}
                 </button>
 
                 {authMode === 'login' && (
@@ -1817,7 +1817,16 @@ export default function App() {
             exit={{ opacity: 0, scale: 0.95 }}
             className="flex-1 flex flex-col p-8 bg-aiko-gray-100"
           >
-            <div className="py-12">
+            <div className="flex items-center gap-4 mb-4">
+              <button
+                onClick={() => setCurrentView('auth')}
+                className="w-10 h-10 rounded-2xl bg-white flex items-center justify-center text-aiko-navy/40 hover:bg-aiko-teal-bg hover:text-aiko-teal transition-all shadow-sm"
+              >
+                <ArrowLeft size={18} className={isRTL ? 'rotate-180' : ''} />
+              </button>
+            </div>
+
+            <div className="py-6">
               <h2 className="text-3xl font-black leading-tight">
                 <span data-i18n="greeting">{t.greeting}</span>   <br/>
                 <span className="text-aiko-navy/30 text-lg font-bold" data-i18n="role_question">{t.role_question}</span>
@@ -1851,12 +1860,19 @@ export default function App() {
             
             <div className="pt-8">
               <button 
-                disabled={!userRole}
-                onClick={() => setCurrentView('dashboard')}
-                className="btn-primary w-full disabled:grayscale disabled:opacity-50"
-                data-i18n="continue_btn"
+                disabled={!userRole || isAuthLoading}
+                onClick={handleRegister}
+                className="btn-primary w-full disabled:grayscale disabled:opacity-50 flex items-center justify-center gap-3"
+                data-i18n="create_account_btn"
               >
-                {t.continue_btn}
+                {isAuthLoading && (
+                  <motion.div
+                    animate={{ rotate: 360 }}
+                    transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                    className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full"
+                  />
+                )}
+                {t.create_account_btn}
               </button>
             </div>
           </motion.div>
@@ -2596,28 +2612,6 @@ export default function App() {
                             </button>
                           ))}
                         </div>
-                        <button 
-                          onClick={() => {
-                            setUserRole(userRole === 'worker' ? 'employer' : 'worker');
-                            setActiveTab('feed');
-                          }}
-                          className="w-full bg-linear-to-r from-aiko- navy to-aiko-navy-light text-white p-6 rounded-[2.5rem] flex items-center justify-between group hover:scale-[1.02] transition-all shadow-xl"
-                        >
-                          <div className="flex items-center gap-4 text-right">
-                            <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
-                              <Briefcase size={22} className="text-white" />
-                            </div>
-                            <div className="text-right">
-                              <p className="text-[10px] font-black text-white/40 uppercase tracking-widest mb-1">
-                                {userRole === 'worker' ? (isRTL ? "تبديل إلى صاحب عمل" : "Switch to Employer") : (isRTL ? "تبديل إلى عامل" : "Switch to Worker")}
-                              </p>
-                              <h4 className="text-base font-black text-white leading-none">
-                                {userRole === 'worker' ? (isRTL ? "أبحث عن عمال" : "I'm looking for workers") : (isRTL ? "أبحث عن عمل" : "I'm looking for work")}
-                              </h4>
-                            </div>
-                          </div>
-                          <ChevronRight size={18} className={isRTL ? 'rotate-180 text-white/30' : 'text-white/30'} />
-                        </button>
                         {showInstallBtn && (
                           <button
                             onClick={handleInstallClick}
