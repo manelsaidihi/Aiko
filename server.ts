@@ -7,6 +7,7 @@ import jwt from "jsonwebtoken";
 import authRoutes from "./src/routes/auth";
 import serviceRoutes from "./src/routes/services";
 import messageRoutes from "./src/routes/messages";
+import reviewRoutes from "./src/routes/reviews";
 import { prisma } from "./src/db";
 
 const JWT_SECRET = process.env.JWT_SECRET || "super-secret-key";
@@ -105,6 +106,7 @@ async function startServer() {
   app.use("/api/auth", authRoutes);
   app.use("/api/services", serviceRoutes);
   app.use("/api/messages", messageRoutes);
+  app.use("/api/reviews", reviewRoutes);
 
   app.get("/api/health", (req, res) => {
     res.json({ status: "ok", service: "Aiko" });
