@@ -836,12 +836,21 @@ export default function App() {
     portfolio: [] as string[]
   });
 
-  const [reviews, setReviews] = useState([
-    { id: 1, user: "Khaled B.", rating: 5, date: "2 days ago", text: "Excellent and very fast work", avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100" },
-    { id: 2, user: "Sarah L.", rating: 4, date: "1 week ago", text: "Professional and polite, recommended", avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100", reply: "Thank you so much Sarah! Happy to help." }
-  ]);
+  const [workerReviewsData, setWorkerReviewsData] = useState<{reviews: any[], averageRating: number, totalReviews: number}>({
+    reviews: [],
+    averageRating: 0,
+    totalReviews: 0
+  });
 
-  const [newReview, setNewReview] = useState({ rating: 5, text: '' });
+  const [showReviewModal, setShowReviewModal] = useState(false);
+  const [reviewData, setReviewData] = useState({
+    workerId: '',
+    requestId: '',
+    rating: 5,
+    comment: ''
+  });
+
+  const [myRequests, setMyRequests] = useState<any[]>([]);
 
   const initSocket = (token: string, userId: string) => {
     const newSocket = io(window.location.origin, {
@@ -867,6 +876,66 @@ export default function App() {
     }
   };
 
+  const fetchMyRequests = async () => {
+    try {
+      const token = authService.getToken();
+      const response = await fetch("/api/services/my/requests", {
+        headers: { "Authorization": `Bearer ${token}` }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setMyRequests(data);
+      }
+    } catch (err) {
+      console.error("Error fetching requests:", err);
+    }
+  };
+
+  const handleCompleteRequest = async (requestId: string, workerId: string) => {
+    try {
+      const response = await fetch(`/api/services/${requestId}/complete`, {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${authService.getToken()}`
+        }
+      });
+      if (response.ok) {
+        showToast(isRTL ? "تم إتمام الخدمة بنجاح" : "Service marked as completed");
+        if (userRole === 'employer' && workerId) {
+          setReviewData({ ...reviewData, requestId, workerId });
+          setShowReviewModal(true);
+        }
+        fetchMyRequests();
+      }
+    } catch (err) {
+      console.error("Error completing service:", err);
+    }
+  };
+
+  const submitReview = async () => {
+    try {
+      const response = await fetch("/api/reviews", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${authService.getToken()}`
+        },
+        body: JSON.stringify(reviewData)
+      });
+      if (response.ok) {
+        showToast(isRTL ? "تم إرسال التقييم بنجاح" : "Review submitted successfully");
+        setShowReviewModal(false);
+        setReviewData({ workerId: '', requestId: '', rating: 5, comment: '' });
+      } else {
+        const err = await response.json();
+        showToast(err.error || "Failed to submit review", "error");
+      }
+    } catch (err) {
+      console.error("Error submitting review:", err);
+      showToast("Error submitting review", "error");
+    }
+  };
+
   const fetchChatHistory = async (userId: string) => {
     try {
       const token = authService.getToken();
@@ -879,6 +948,18 @@ export default function App() {
       }
     } catch (err) {
       console.error("Error fetching chat history:", err);
+    }
+  };
+
+  const fetchWorkerReviews = async (workerId: string) => {
+    try {
+      const response = await fetch(`/api/reviews/worker/${workerId}`);
+      if (response.ok) {
+        const data = await response.json();
+        setWorkerReviewsData(data);
+      }
+    } catch (err) {
+      console.error("Error fetching worker reviews:", err);
     }
   };
 
@@ -942,6 +1023,9 @@ export default function App() {
     if (activeTab === "chat" && currentUser) {
       fetchConversations();
     }
+    if (activeTab === "activity" && currentUser) {
+      fetchMyRequests();
+    }
   }, [activeTab, currentUser]);
 
   useEffect(() => {
@@ -953,6 +1037,9 @@ export default function App() {
         bio: currentUser.bio || "",
         portfolio: currentUser.portfolio || []
       });
+      if (currentUser.role === 'worker') {
+        fetchWorkerReviews(currentUser.id);
+      }
     }
   }, [currentUser]);
 
@@ -1907,34 +1994,36 @@ export default function App() {
                 >
                   <SectionTitle title={userRole === 'worker' ? t.nav_requests : t.nav_myjobs} i18nTitleKey={userRole === 'worker' ? "nav_requests" : "nav_myjobs"} />
                   <div className="space-y-4">
-                    <div className="bento-card p-6 border-l-4 border-aiko-orange flex items-center justify-between">
-                      <div className="flex items-center gap-4">
-                        <div className="p-3 bg-aiko-orange/10 text-aiko-orange rounded-xl">
-                          <Clock size={24} />
+                    {myRequests.map((req) => (
+                      <div key={req.id} className={`bento-card p-6 border-l-4 ${req.status === 'completed' ? 'border-aiko-teal' : 'border-aiko-orange'} flex items-center justify-between`}>
+                        <div className="flex items-center gap-4">
+                          <div className={`p-3 rounded-xl ${req.status === 'completed' ? 'bg-aiko-teal/10 text-aiko-teal' : 'bg-aiko-orange/10 text-aiko-orange'}`}>
+                            {req.status === 'completed' ? <CheckCircle2 size={24} /> : <Clock size={24} />}
+                          </div>
+                          <div>
+                            <h4 className="font-black text-aiko-navy">{req.title}</h4>
+                            <p className="text-xs font-bold text-aiko-navy/40">{isRTL ? (req.status === 'open' ? 'مفتوح' : req.status === 'assigned' ? 'تم التعيين' : 'مكتمل') : req.status}</p>
+                          </div>
                         </div>
-                        <div>
-                          <h4 className="font-black text-aiko-navy">AC Installation</h4>
-                          <p className="text-xs font-bold text-aiko-navy/40" data-i18n="pending">{t.pending}</p>
+                        <div className="flex flex-col items-end gap-2">
+                          <span className="text-sm font-black text-aiko-teal">{req.budget}</span>
+                          {req.status === 'assigned' && (
+                            <button
+                              onClick={() => handleCompleteRequest(req.id, req.workerId)}
+                              className="text-[10px] font-black uppercase tracking-widest bg-aiko-teal text-white px-3 py-1.5 rounded-lg"
+                            >
+                              {isRTL ? "إتمام المهمة" : "Complete Task"}
+                            </button>
+                          )}
                         </div>
                       </div>
-                      <div className="text-right">
-                        <span className="text-sm font-black text-aiko-teal">3500 DA</span>
+                    ))}
+                    {myRequests.length === 0 && (
+                       <div className="text-center py-10 text-aiko-navy/20">
+                        <Briefcase size={48} className="mx-auto mb-4 opacity-10" />
+                        <p className="font-bold">{isRTL ? "لا توجد طلبات حالياً" : "No requests yet"}</p>
                       </div>
-                    </div>
-                    <div className="bento-card p-6 border-l-4 border-aiko-teal flex items-center justify-between">
-                      <div className="flex items-center gap-4">
-                        <div className="p-3 bg-aiko-teal/10 text-aiko-teal rounded-xl">
-                          <CheckCircle2 size={24} />
-                        </div>
-                        <div>
-                          <h4 className="font-black text-aiko-navy">Water Leakage Repair</h4>
-                          <p className="text-xs font-bold text-aiko-navy/40" data-i18n="accepted">{t.accepted}</p>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <span className="text-sm font-black text-aiko-teal">1200 DA</span>
-                      </div>
-                    </div>
+                    )}
                   </div>
                 </motion.div>
               )}
@@ -2166,16 +2255,28 @@ export default function App() {
                         </div>
                         <div className="flex justify-center gap-8 relative z-10">
                           <div className="text-center group/stat cursor-pointer">
-                            <p className="text-xl font-black text-aiko-navy group-hover:text-aiko-teal transition-colors">{currentUser?.rating || "5.0"}</p>
+                            <p className="text-xl font-black text-aiko-navy group-hover:text-aiko-teal transition-colors">
+                              {currentUser?.role === 'worker' ? (workerReviewsData.averageRating?.toFixed(1) || "0.0") : (currentUser?.rating || "5.0")}
+                            </p>
                             <p className="text-[10px] font-black uppercase tracking-widest text-aiko-navy/30 mb-1">{isRTL ? "التقييم" : "Rating"}</p>
                             <div className="flex gap-0.5 justify-center mt-1 text-aiko-orange">
-                              {[...Array(5)].map((_, i) => <Star key={i} size={10} fill="currentColor" />)}
+                              {[...Array(5)].map((_, i) => (
+                                <Star
+                                  key={i}
+                                  size={10}
+                                  fill={i < Math.round(currentUser?.role === 'worker' ? workerReviewsData.averageRating : (currentUser?.rating || 5)) ? "currentColor" : "none"}
+                                />
+                              ))}
                             </div>
                           </div>
                           <div className="h-10 w-[2px] bg-aiko-gray-100 self-center" />
                           <div className="text-center group/stat cursor-pointer">
-                            <p className="text-xl font-black text-aiko-navy group-hover:text-aiko-teal transition-colors">128</p>
-                            <p className="text-[10px] font-black uppercase tracking-widest text-aiko-navy/30 mb-1">{isRTL ? "المهام" : "Jobs"}</p>
+                            <p className="text-xl font-black text-aiko-navy group-hover:text-aiko-teal transition-colors">
+                              {currentUser?.role === 'worker' ? workerReviewsData.totalReviews : "128"}
+                            </p>
+                            <p className="text-[10px] font-black uppercase tracking-widest text-aiko-navy/30 mb-1">
+                              {currentUser?.role === 'worker' ? (isRTL ? "التقييمات" : "Reviews") : (isRTL ? "المهام" : "Jobs")}
+                            </p>
                             <div className="w-8 h-1 bg-aiko-teal/20 mx-auto mt-2 rounded-full overflow-hidden">
                               <div className="w-2/3 h-full bg-aiko-teal" />
                             </div>
@@ -2246,47 +2347,31 @@ export default function App() {
                         <SectionTitle title={isRTL ? "الآراء والتقييمات" : "Ratings & Reviews"} />
                         
                         <div className="space-y-4">
-                          {reviews.map((review, i) => (
+                          {workerReviewsData.reviews.slice(0, 3).map((review) => (
                             <div key={review.id} className="bento-card p-6 hover:translate-x-1 transition-transform space-y-4">
                               <div className="flex items-center gap-3">
-                                <img src={review.avatar} className="w-12 h-12 rounded-2xl object-cover border-2 border-white shadow-sm" alt="Reviewer" />
+                                <div className="w-12 h-12 bg-aiko-gray-100 rounded-2xl flex items-center justify-center text-aiko-navy/20 border-2 border-white shadow-sm">
+                                  <UserIcon size={24} />
+                                </div>
                                 <div className="flex-1">
                                   <div className="flex items-center justify-between">
-                                    <h4 className="text-sm font-black text-aiko-navy">{(review as any).name || review.user} — {isRTL ? "تقييم خارجي" : "External Rating"}</h4>
-                                    <span className="text-[10px] font-bold text-aiko-navy/30">{review.date}</span>
+                                    <h4 className="text-sm font-black text-aiko-navy">{review.employer.name}</h4>
+                                    <span className="text-[10px] font-bold text-aiko-navy/30">{new Date(review.createdAt).toLocaleDateString()}</span>
                                   </div>
                                   <div className="flex gap-0.5 text-aiko-orange mt-0.5">
                                     {[...Array(5)].map((_, i) => <Star key={i} size={10} fill={i < review.rating ? "currentColor" : "none"} />)}
                                   </div>
                                 </div>
                               </div>
-                              <p className="text-xs font-bold text-aiko-navy/60 leading-relaxed">{review.text || (review as any).comment}</p>
-                              
-                              {(review as any).reply ? (
-                                <div className="bg-aiko-teal/5 p-4 rounded-2xl border-l-4 border-aiko-teal flex gap-3">
-                                  <div className="w-1 h-full bg-aiko-teal rounded-full" />
-                                  <div className="flex-1">
-                                    <p className="text-[9px] font-black text-aiko-teal uppercase tracking-widest mb-1">{isRTL ? "ردي" : "MY REPLY"}</p>
-                                    <p className="text-xs font-bold text-aiko-teal-dark">{(review as any).reply}</p>
-                                  </div>
-                                </div>
-                              ) : (
-                                <button 
-                                  onClick={() => {
-                                    const reply = prompt(isRTL ? "اكتب ردك:" : "Write your reply:");
-                                    if (reply) {
-                                      setReviews(reviews.map(r => r.id === review.id ? { ...r, reply } : r));
-                                      showToast(isRTL ? 'تم إضافة الرد' : 'Reply added');
-                                    }
-                                  }}
-                                  className="text-[10px] font-black text-aiko-teal uppercase tracking-widest hover:text-aiko-orange transition-colors flex items-center gap-2"
-                                >
-                                  <MessageCircle size={14} />
-                                  {isRTL ? "إضافة رد" : "Add Reply"}
-                                </button>
-                              )}
+                              <p className="text-xs font-bold text-aiko-navy/60 leading-relaxed">{review.comment}</p>
                             </div>
                           ))}
+                          {workerReviewsData.reviews.length === 0 && (
+                            <div className="text-center py-10 text-aiko-navy/20 bg-white rounded-[2rem]">
+                              <Star size={48} className="mx-auto mb-4 opacity-10" />
+                              <p className="font-bold">{isRTL ? "لا توجد تقييمات بعد" : "No reviews yet"}</p>
+                            </div>
+                          )}
                         </div>
                       </div>
 
@@ -2547,6 +2632,72 @@ export default function App() {
 
             <AnimatePresence>
                 {showLocationModal && <LocationModal />}
+            </AnimatePresence>
+
+            {/* Review Modal */}
+            <AnimatePresence>
+              {showReviewModal && (
+                <div className="fixed inset-0 z-[300] flex items-center justify-center p-6">
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    onClick={() => setShowReviewModal(false)}
+                    className="absolute inset-0 bg-aiko-navy/60 backdrop-blur-md"
+                  />
+                  <motion.div
+                    initial={{ scale: 0.9, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    exit={{ scale: 0.9, opacity: 0 }}
+                    className="relative w-full max-w-sm bg-white rounded-[40px] p-8 shadow-2xl space-y-6"
+                  >
+                    <div className="flex flex-col items-center text-center space-y-2 mb-4">
+                       <div className="w-16 h-16 bg-aiko-orange/10 text-aiko-orange rounded-2xl flex items-center justify-center mb-2">
+                          <Star size={32} fill="currentColor" />
+                       </div>
+                       <h3 className="text-2xl font-black text-aiko-navy">{isRTL ? "تقييم الخدمة" : "Review Service"}</h3>
+                       <p className="text-sm font-bold text-aiko-navy/30">{isRTL ? "أخبرنا عن تجربتك مع العامل" : "Tell us about your experience with the worker"}</p>
+                    </div>
+
+                    <div className="flex justify-center gap-2">
+                      {[1, 2, 3, 4, 5].map((star) => (
+                        <button
+                          key={star}
+                          onClick={() => setReviewData({ ...reviewData, rating: star })}
+                          className={`transition-all ${reviewData.rating >= star ? 'text-aiko-orange scale-110' : 'text-aiko-gray-200'}`}
+                        >
+                          <Star size={32} fill={reviewData.rating >= star ? 'currentColor' : 'none'} strokeWidth={2} />
+                        </button>
+                      ))}
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black uppercase tracking-widest text-aiko-navy/40 px-4">{isRTL ? "التعليق" : "Comment"}</label>
+                      <textarea
+                        value={reviewData.comment}
+                        onChange={(e) => setReviewData({ ...reviewData, comment: e.target.value })}
+                        className="w-full bg-aiko-gray-50 rounded-2xl p-4 text-sm font-bold text-aiko-navy focus:outline-none focus:ring-2 focus:ring-aiko-teal/20 min-h-[100px] resize-none border-2 border-transparent focus:border-aiko-teal/10 transition-all"
+                        placeholder={isRTL ? "اكتب تعليقك هنا..." : "Write your comment here..."}
+                      />
+                    </div>
+
+                    <div className="flex gap-4">
+                      <button
+                        onClick={() => setShowReviewModal(false)}
+                        className="flex-1 py-4 rounded-2xl bg-aiko-gray-100 text-aiko-navy font-black text-xs uppercase tracking-widest hover:bg-aiko-gray-200 transition-all"
+                      >
+                        {isRTL ? "تخطي" : "Skip"}
+                      </button>
+                      <button
+                        onClick={submitReview}
+                        className="flex-[2] py-4 rounded-2xl bg-aiko-teal text-white font-black text-xs uppercase tracking-widest hover:bg-aiko-teal-dark transition-all shadow-xl shadow-aiko-teal/20"
+                      >
+                        {isRTL ? "إرسال التقييم" : "Submit Review"}
+                      </button>
+                    </div>
+                  </motion.div>
+                </div>
+              )}
             </AnimatePresence>
           </motion.div>
         )}
