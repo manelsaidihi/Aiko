@@ -3,8 +3,13 @@ import { createServer } from "http";
 import { Server } from "socket.io";
 import { createServer as createViteServer } from "vite";
 import path from "path";
+import jwt from "jsonwebtoken";
 import authRoutes from "./src/routes/auth";
 import serviceRoutes from "./src/routes/services";
+import messageRoutes from "./src/routes/messages";
+import { prisma } from "./src/db";
+
+const JWT_SECRET = process.env.JWT_SECRET || "super-secret-key";
 
 async function startServer() {
   const app = express();
@@ -23,31 +28,75 @@ async function startServer() {
 
   const PORT = 3000;
 
-  // Simple in-memory storage for demo purposes
-  const serviceRequests: any[] = [];
-  const activeUsers = new Map();
-
   io.on("connection", (socket) => {
     console.log("A user connected:", socket.id);
 
-    socket.on("join", (user) => {
-      activeUsers.set(socket.id, user);
-      io.emit("users_update", Array.from(activeUsers.values()));
+    socket.on("join", (data) => {
+      const token = socket.handshake.auth.token || data?.token;
+      if (!token) return;
+
+      try {
+        const decoded = jwt.verify(token, JWT_SECRET) as any;
+        const userId = decoded.id;
+        socket.join(`user_${userId}`);
+        console.log(`User ${userId} joined their room`);
+      } catch (err) {
+        console.error("Auth error in socket join");
+      }
     });
 
-    socket.on("send_message", (data) => {
-      // Broadcast message to shared room or specific user
-      io.emit("new_message", data);
+    socket.on("send_message", async (data) => {
+      const token = socket.handshake.auth.token || data?.token;
+      if (!token) return;
+
+      try {
+        const decoded = jwt.verify(token, JWT_SECRET) as any;
+        const senderId = decoded.id;
+        const { receiverId, text } = data;
+
+        const message = await prisma.message.create({
+          data: {
+            senderId,
+            receiverId,
+            text,
+          },
+          include: {
+            sender: { select: { name: true } }
+          }
+        });
+
+        // Send to receiver
+        io.to(`user_${receiverId}`).emit("new_message", message);
+        // Confirm to sender
+        socket.emit("message_sent", message);
+      } catch (err) {
+        console.error("Error sending message via socket:", err);
+      }
     });
 
-    socket.on("post_request", (request) => {
-      serviceRequests.push(request);
-      io.emit("new_request", request);
+    socket.on("mark_read", async (data) => {
+      const token = socket.handshake.auth.token || data?.token;
+      if (!token) return;
+
+      try {
+        const decoded = jwt.verify(token, JWT_SECRET) as any;
+        const userId = decoded.id;
+        const { otherUserId } = data;
+
+        await prisma.message.updateMany({
+          where: {
+            senderId: otherUserId,
+            receiverId: userId,
+            isRead: false,
+          },
+          data: { isRead: true },
+        });
+      } catch (err) {
+        console.error("Error marking messages as read:", err);
+      }
     });
 
     socket.on("disconnect", () => {
-      activeUsers.delete(socket.id);
-      io.emit("users_update", Array.from(activeUsers.values()));
       console.log("User disconnected");
     });
   });
@@ -55,6 +104,7 @@ async function startServer() {
   // API Routes
   app.use("/api/auth", authRoutes);
   app.use("/api/services", serviceRoutes);
+  app.use("/api/messages", messageRoutes);
 
   app.get("/api/health", (req, res) => {
     res.json({ status: "ok", service: "Aiko" });

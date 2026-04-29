@@ -5,6 +5,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
+import { io, Socket } from "socket.io-client";
 import { 
   Briefcase, 
   Search, 
@@ -47,7 +48,8 @@ import {
   LayoutGrid,
   Mail,
   Camera,
-  Settings2
+  Settings2,
+  Image as ImageIcon
 } from 'lucide-react';
 
 // --- Types ---
@@ -641,7 +643,7 @@ const NavItem = ({ icon: Icon, label, active, onClick, count, i18nKey }: any) =>
   </button>
 );
 
-const JobCard = ({ title, company, location, price, time, type, icon: Icon, onApply, lang, onContact }: any) => {
+const JobCard = ({ title, company, location, price, time, type, icon: Icon, onApply, lang, onContact, urgent }: any) => {
   const isRTL = lang === 'ar';
   const t = translations[lang as Language];
   
@@ -665,7 +667,12 @@ const JobCard = ({ title, company, location, price, time, type, icon: Icon, onAp
         </div>
         <div className="text-right">
           <span className="text-sm font-black text-aiko-teal-dark">{price}</span>
-          {type && <div className="text-[9px] font-black uppercase tracking-widest text-aiko-orange mt-1">{type}</div>}
+          {type && (
+            <div className={`text-[9px] font-black uppercase tracking-widest mt-1 flex items-center justify-end gap-1 ${urgent ? 'text-aiko-orange' : 'text-aiko-navy/30'}`}>
+              {urgent && <Zap size={10} fill="currentColor" />}
+              {type}
+            </div>
+          )}
         </div>
       </div>
       
@@ -773,6 +780,7 @@ const WorkerCard = ({ name, skill, rating, price, distance, icon: Icon, onOffer,
 import { authService } from './services/authService';
 
 export default function App() {
+  const [socket, setSocket] = useState<Socket | null>(null);
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [isAppLoading, setIsAppLoading] = useState(true);
   const [isAuthLoading, setIsAuthLoading] = useState(false);
@@ -790,6 +798,10 @@ export default function App() {
   const [commune, setCommune] = useState('');
   const [activeTab, setActiveTab] = useState('feed');
   const [category, setCategory] = useState('all');
+  const [conversations, setConversations] = useState<any[]>([]);
+  const [activeChatUser, setActiveChatUser] = useState<any>(null);
+  const [chatMessages, setChatMessages] = useState<any[]>([]);
+  const [newMessageText, setNewMessageText] = useState("");
   const [showNotification, setShowNotification] = useState(false);
   const [notifications, setNotifications] = useState(MOCK_NOTIFICATIONS);
   const [showContactModal, setShowContactModal] = useState(false);
@@ -801,49 +813,195 @@ export default function App() {
   const [showAvailabilityModal, setShowAvailabilityModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [toast, setToast] = useState<{ message: string, type: 'success' | 'error' } | null>(null);
+  const [isRTL, setIsRTL] = useState(lang === "ar");
 
   const showToast = (message: string, type: 'success' | 'error' = 'success') => {
     setToast({ message, type });
     setTimeout(() => setToast(null), 3000);
   };
 
+  useEffect(() => {
+    setIsRTL(lang === "ar");
+  }, [lang]);
+
   const t = translations[lang];
-  const isRTL = lang === 'ar';
 
   // Profile & Review States
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [profileData, setProfileData] = useState({
-    name: '',
-    bio: '',
-    portfolio: [
-      'https://images.unsplash.com/photo-1581094288338-2314dddb7ecb?w=400&h=300&fit=crop',
-      'https://images.unsplash.com/photo-1621905251189-08b45d6a269e?w=400&h=300&fit=crop',
-      'https://images.unsplash.com/photo-1558451510-74e1792942f7?w=400&h=300&fit=crop',
-      'https://images.unsplash.com/photo-1544724569-5f546fd6f2b5?w=400&h=300&fit=crop'
-    ]
+    name: "",
+    email: "",
+    phone: "",
+    bio: "",
+    portfolio: [] as string[]
   });
 
   const [reviews, setReviews] = useState([
-    { id: 1, user: 'Khaled B.', rating: 5, date: '2 days ago', text: '', avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100' },
-    { id: 2, user: 'Sarah L.', rating: 4, date: '1 week ago', text: '', avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100', reply: '' }
+    { id: 1, user: "Khaled B.", rating: 5, date: "2 days ago", text: "Excellent and very fast work", avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100" },
+    { id: 2, user: "Sarah L.", rating: 4, date: "1 week ago", text: "Professional and polite, recommended", avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100", reply: "Thank you so much Sarah! Happy to help." }
   ]);
 
   const [newReview, setNewReview] = useState({ rating: 5, text: '' });
 
-  useEffect(() => {
-    setProfileData(prev => ({
-      ...prev,
-      name: fullName || (userRole === 'worker' ? 'Mohamed Amin' : 'Amel Sara'),
-      bio: userRole === 'worker' 
-        ? (isRTL ? "متخصص في الصيانة المنزلية والكهرباء مع خبرة تفوق 5 سنوات. التزم بتقديم جودة يابانية (Monozukuri) في كل مهمة." : "Specialist in home maintenance and electricity with over 5 years of experience. Committed to delivering Japanese quality (Monozukuri) in every task.")
-        : (isRTL ? "ابحث عن الافضل دائماً لمنزلي وعائلتي. أقدر الدقة والالتزام والمهنية العالية." : "Always looking for the best for my home and family. I appreciate precision, commitment, and high professionalism.")
-    }));
+  const initSocket = (token: string, userId: string) => {
+    const newSocket = io(window.location.origin, {
+      auth: { token }
+    });
+    setSocket(newSocket);
+    newSocket.emit("join", { id: userId });
+    return newSocket;
+  };
 
-    setReviews([
-      { id: 1, user: 'Khaled B.', rating: 5, date: isRTL ? 'منذ يومين' : '2 days ago', text: isRTL ? 'عمل ممتاز وسريع جداً' : 'Excellent and very fast work', avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100' },
-      { id: 2, user: 'Sarah L.', rating: 4, date: isRTL ? 'منذ أسبوع' : '1 week ago', text: isRTL ? 'محترف وخلوق، أوصي به' : 'Professional and polite, recommended', avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100', reply: isRTL ? 'شكراً جزيلاً سارة! يسعدنا خدمتك.' : 'Thank you so much Sarah! Happy to help.' }
-    ]);
-  }, [userRole, lang, fullName, isRTL]);
+  const fetchConversations = async () => {
+    try {
+      const token = authService.getToken();
+      const response = await fetch("/api/messages/conversations", {
+        headers: { "Authorization": `Bearer ${token}` }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setConversations(data);
+      }
+    } catch (err) {
+      console.error("Error fetching conversations:", err);
+    }
+  };
+
+  const fetchChatHistory = async (userId: string) => {
+    try {
+      const token = authService.getToken();
+      const response = await fetch(`/api/messages/${userId}`, {
+        headers: { "Authorization": `Bearer ${token}` }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setChatMessages(data);
+      }
+    } catch (err) {
+      console.error("Error fetching chat history:", err);
+    }
+  };
+
+  const handleOpenChat = (user: any) => {
+    setActiveChatUser(user);
+    fetchChatHistory(user.id);
+    if (socket) {
+      socket.emit("mark_read", { otherUserId: user.id });
+    }
+    fetchConversations();
+  };
+
+  const handleSendMessage = () => {
+    if (!newMessageText.trim() || !activeChatUser || !socket) return;
+
+    socket.emit("send_message", {
+      receiverId: activeChatUser.id,
+      text: newMessageText
+    });
+    setNewMessageText("");
+  };
+
+  const handleOpenItem = (item: any) => {
+    setActiveItem(item);
+  };
+
+  const handleReviewUser = async (targetUserId: string, rating: number, comment: string) => {
+    if (!currentUser) return;
+    try {
+      const response = await fetch("/api/messages/review", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${authService.getToken()}`
+        },
+        body: JSON.stringify({ targetUserId, rating, comment })
+      });
+      if (response.ok) {
+        showToast(isRTL ? "تم إضافة التقييم بنجاح" : "Review added successfully");
+        if (activeChatUser && activeChatUser.id === targetUserId) {
+           fetchChatHistory(targetUserId);
+        }
+      }
+    } catch (err) {
+      console.error("Error submitting review:", err);
+    }
+  };
+
+  const handleUpdateProfile = async () => {
+    try {
+      const updated = await authService.updateProfile(profileData);
+      setCurrentUser((prev: any) => ({ ...prev, ...updated }));
+      setIsEditingProfile(false);
+      showToast(isRTL ? "تم تحديث الملف الشخصي بنجاح" : "Profile updated successfully");
+    } catch (err) {
+      showToast(isRTL ? "فشل تحديث الملف الشخصي" : "Failed to update profile", "error");
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === "chat" && currentUser) {
+      fetchConversations();
+    }
+  }, [activeTab, currentUser]);
+
+  useEffect(() => {
+    if (currentUser) {
+      setProfileData({
+        name: currentUser.name || "",
+        email: currentUser.email || "",
+        phone: currentUser.phone || "",
+        bio: currentUser.bio || "",
+        portfolio: currentUser.portfolio || []
+      });
+    }
+  }, [currentUser]);
+
+  useEffect(() => {
+    const initAuth = async () => {
+      const token = authService.getToken();
+      if (token) {
+        try {
+          const user = await authService.getMe();
+          setCurrentUser(user);
+          setUserRole(user.role);
+          initSocket(token, user.id);
+          setCurrentView('dashboard');
+        } catch (err) {
+          authService.clearToken();
+          setCurrentView('auth');
+        }
+      }
+      setIsAppLoading(false);
+    };
+    initAuth();
+    const timer = setTimeout(() => setShowSplash(false), 2500);
+    return () => clearTimeout(timer);
+  }, []);
+
+  useEffect(() => {
+    if (!socket) return;
+
+    socket.on("new_message", (message) => {
+      if (activeChatUser && (message.senderId === activeChatUser.id || message.receiverId === activeChatUser.id)) {
+        setChatMessages(prev => [...prev, message]);
+        socket.emit("mark_read", { otherUserId: activeChatUser.id });
+      }
+      fetchConversations();
+    });
+
+    socket.on("message_sent", (message) => {
+      if (activeChatUser && (message.senderId === activeChatUser.id || message.receiverId === activeChatUser.id)) {
+        setChatMessages(prev => [...prev, message]);
+      }
+      fetchConversations();
+    });
+
+    return () => {
+      socket.off("new_message");
+      socket.off("message_sent");
+    };
+  }, [socket, activeChatUser]);
+
   const [workerSettings, setWorkerSettings] = useState({
     type: 'now',
     price: '1500',
@@ -861,11 +1019,11 @@ export default function App() {
   });
 
   const jobsData = [
-    { id: 1, title: 'سباك متنقل مطلوب', company: 'شركة البناء الحديث', location: 'باب الزوار', price: '2500 DA', time: '15m ago', type: '⚡ Urgent', icon: Hammer, cat: 'home_repair' },
-    { id: 2, title: 'فني تكييف مركزي', company: 'الفصول الأربعة', location: 'حيدرة', price: '4000 DA', time: '1h ago', type: '☀️ Part-time', icon: Laptop, cat: 'home_repair' },
-    { id: 3, title: 'مطور واجهات React', company: 'تيك الجزاير', location: 'سيدي يحيى', price: '8000 DA', time: '3h ago', type: '💻 Remote', icon: Laptop, cat: 'tech' },
-    { id: 4, title: 'سائق شاحنة نقل', company: 'لوجيستيك دزاير', location: 'رويبة', price: '3500 DA', time: '5h ago', type: '🚚 Full-time', icon: Truck, cat: 'automotive' },
-    { id: 5, title: 'منظف واجهات زجاجية', company: 'بلور صافي', location: 'الشراقة', price: '1500 DA/h', time: '6h ago', type: '🧹 Quick', icon: Sparkles, cat: 'cleaning' },
+    { id: 1, title: 'سباك متنقل مطلوب', company: 'شركة البناء الحديث', location: 'باب الزوار', price: '2500 DA', time: '15m ago', type: isRTL ? 'عاجل' : 'Urgent', icon: Hammer, cat: 'home_repair', urgent: true },
+    { id: 2, title: 'فني تكييف مركزي', company: 'الفصول الأربعة', location: 'حيدرة', price: '4000 DA', time: '1h ago', type: isRTL ? 'دوام جزئي' : 'Part-time', icon: Laptop, cat: 'home_repair' },
+    { id: 3, title: 'مطور واجهات React', company: 'تيك الجزاير', location: 'سيدي يحيى', price: '8000 DA', time: '3h ago', type: isRTL ? 'عن بعد' : 'Remote', icon: Laptop, cat: 'tech' },
+    { id: 4, title: 'سائق شاحنة نقل', company: 'لوجيستيك دزاير', location: 'رويبة', price: '3500 DA', time: '5h ago', type: isRTL ? 'دوام كامل' : 'Full-time', icon: Truck, cat: 'automotive' },
+    { id: 5, title: 'منظف واجهات زجاجية', company: 'بلور صافي', location: 'الشراقة', price: '1500 DA/h', time: '6h ago', type: isRTL ? 'سريع' : 'Quick', icon: Sparkles, cat: 'cleaning' },
   ];
 
   const workersData = [
@@ -877,12 +1035,15 @@ export default function App() {
   ];
 
   const filteredJobs = jobsData.filter(j => 
-    (category === 'all' || j.cat === category) && 
-    (j.title.toLowerCase().includes(searchQuery.toLowerCase()) || j.company.toLowerCase().includes(searchQuery.toLowerCase()))
+    (category === "all" || j.cat === category) &&
+    (j.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+     j.company.toLowerCase().includes(searchQuery.toLowerCase()) ||
+     j.location.toLowerCase().includes(searchQuery.toLowerCase()))
   );
   const filteredWorkers = workersData.filter(w => 
-    (category === 'all' || w.cat === category) && 
-    (w.name.toLowerCase().includes(searchQuery.toLowerCase()) || w.skill.toLowerCase().includes(searchQuery.toLowerCase()))
+    (category === "all" || w.cat === category) &&
+    (w.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+     w.skill.toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
   const applyTranslations = () => {
@@ -952,33 +1113,13 @@ export default function App() {
     else if (currentView === 'onboard') setCurrentView('lang');
   };
 
-  useEffect(() => {
-    const initAuth = async () => {
-      const token = authService.getToken();
-      if (token) {
-        try {
-          const user = await authService.getMe();
-          setCurrentUser(user);
-          setUserRole(user.role);
-          setCurrentView('dashboard');
-        } catch (err) {
-          authService.clearToken();
-          setCurrentView('auth');
-        }
-      }
-      setIsAppLoading(false);
-    };
-    initAuth();
-    const timer = setTimeout(() => setShowSplash(false), 2500);
-    return () => clearTimeout(timer);
-  }, []);
-
   const handleLogin = async () => {
     setIsAuthLoading(true);
     try {
       const data = await authService.login(email, password);
       setCurrentUser(data.user);
       setUserRole(data.user.role);
+      initSocket(data.token, data.user.id);
       setCurrentView('dashboard');
       showToast(isRTL ? 'تم تسجيل الدخول بنجاح' : 'Login successful');
     } catch (err: any) {
@@ -1004,6 +1145,7 @@ export default function App() {
       });
       setCurrentUser(data.user);
       setUserRole(data.user.role);
+      initSocket(data.token, data.user.id);
       setCurrentView('dashboard');
       showToast(isRTL ? 'تم إنشاء الحساب بنجاح' : 'Registration successful');
     } catch (err: any) {
@@ -1259,7 +1401,7 @@ export default function App() {
           >
             <div className="flex-1 flex flex-col items-center justify-center text-center space-y-12">
               <div className="w-64 h-64 bg-aiko-teal-bg rounded-full flex items-center justify-center text-[100px] shadow-inner">
-                {isRTL ? '⚡' : '🚀'}
+                <Zap size={80} className="text-aiko-teal animate-pulse" />
               </div>
               <div className="space-y-4 max-w-md">
                 <h2 className="text-3xl font-black" data-i18n="ob0_title">{t.ob0_title}</h2>
@@ -1457,7 +1599,7 @@ export default function App() {
           >
             <div className="py-12">
               <h2 className="text-3xl font-black leading-tight">
-                <span data-i18n="greeting">{t.greeting}</span> 👋 <br/>
+                <span data-i18n="greeting">{t.greeting}</span>   <br/>
                 <span className="text-aiko-navy/30 text-lg font-bold" data-i18n="role_question">{t.role_question}</span>
               </h2>
             </div>
@@ -1580,7 +1722,7 @@ export default function App() {
                         <div className="relative z-10">
                           <div className="flex items-center justify-between">
                             <div>
-                              <h3 className="text-2xl font-black" data-i18n="greeting">{t.greeting} Mohamed 👋</h3>
+                              <h3 className="text-2xl font-black" data-i18n="greeting">{t.greeting} Mohamed  </h3>
                               <p className="text-white/60 font-bold text-sm mt-1" data-i18n={isAvailable ? "avail_on" : "avail_off"}>{isAvailable ? t.avail_on : t.avail_off}</p>
                             </div>
                             <div 
@@ -1613,6 +1755,19 @@ export default function App() {
                         </div>
                       </div>
 
+                      <div className="relative mb-6">
+                        <input
+                          type="text"
+                          placeholder={isRTL ? "ابحث بذكاء عن وظائف..." : "Smart search for jobs..."}
+                          value={searchQuery}
+                          onChange={(e) => setSearchQuery(e.target.value)}
+                          className="w-full bg-white border-2 border-aiko-gray-100 rounded-[2rem] py-5 px-8 pr-14 text-sm font-bold text-aiko-navy focus:outline-none focus:border-aiko-teal transition-all shadow-sm"
+                        />
+                        <div className={`absolute top-1/2 -translate-y-1/2 ${isRTL ? "left-6" : "right-6"} text-aiko-teal`}>
+                          <Search size={22} strokeWidth={3} />
+                        </div>
+                      </div>
+
                       <SectionTitle title={t.jobs_nearby_title} action={t.choose_lang === "Choose Your Language" ? "All" : "الكل"} onClick={() => setCategory('all')} />
                       <div className="grid gap-4">
                         {filteredJobs.map(job => (
@@ -1620,7 +1775,7 @@ export default function App() {
                             key={job.id}
                             {...job}
                             lang={lang}
-                            onApply={() => setActiveItem(job)} 
+                            onApply={() => handleOpenItem(job)}
                             onContact={() => {
                               setContactTarget(job);
                               setShowContactModal(true);
@@ -1662,7 +1817,7 @@ export default function App() {
                         <div className="space-y-1">
                            <h4 className="text-sm font-black text-aiko-navy flex items-center gap-2">
                               {isRTL ? "الطلبات المؤقتة مفعلة" : "Instant Requests Enabled"}
-                              <span className="text-lg">⏳</span>
+                              <Clock size={20} />
                            </h4>
                            <p className="text-[10px] font-bold text-aiko-navy/30">{isRTL ? "العمال لديهم 5 دقائق للرد على طلباتك" : "Workers have 5 mins to respond to your requests"}</p>
                         </div>
@@ -1677,16 +1832,16 @@ export default function App() {
                       </div>
 
                       <div className="space-y-4">
-                        <div className="relative">
+                        <div className="relative mb-6">
                           <input 
                             type="text"
-                            placeholder={(userRole as string) === 'worker' ? (isRTL ? "ابحث عن وظيفة..." : "Search for a job...") : (isRTL ? "ابحث عن عامل..." : "Search for a worker...")}
+                            placeholder={isRTL ? "ابحث بذكاء عن عمال..." : "Smart search for workers..."}
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                             className="w-full bg-white border-2 border-aiko-gray-100 rounded-[2rem] py-5 px-8 pr-14 text-sm font-bold text-aiko-navy focus:outline-none focus:border-aiko-teal transition-all shadow-sm"
                           />
-                          <div className={`absolute top-1/2 -translate-y-1/2 ${isRTL ? 'left-6' : 'right-6'} text-aiko-navy/20`}>
-                            <Search size={22} />
+                          <div className={`absolute top-1/2 -translate-y-1/2 ${isRTL ? "left-6" : "right-6"} text-aiko-teal`}>
+                            <Search size={22} strokeWidth={3} />
                           </div>
                         </div>
 
@@ -1712,7 +1867,7 @@ export default function App() {
                             key={worker.id}
                             {...worker}
                             lang={lang}
-                            onOffer={() => setActiveItem(worker)} 
+                            onOffer={() => handleOpenItem(worker)}
                             onContact={() => {
                               setContactTarget(worker);
                               setShowContactModal(true);
@@ -1790,32 +1945,110 @@ export default function App() {
                   animate={{ opacity: 1, x: 0 }}
                   className="space-y-6"
                 >
-                  <SectionTitle title={t.nav_messages} i18nTitleKey="nav_messages" />
-                  <div className="space-y-2">
-                    {[
-                      { name: 'Omar Belkacem', msg: t.pending, time: '10:30', unread: 2 },
-                      { name: 'Yacine Haddadi', msg: t.accepted, time: '09:15', unread: 0 },
-                      { name: 'Ennour Co', msg: t.accepted, time: 'Yesterday', unread: 0 }
-                    ].map((chat, i) => (
-                      <div key={i} className="flex items-center gap-4 p-4 hover:bg-white rounded-2xl cursor-pointer transition-colors group">
-                        <div className="w-14 h-14 bg-aiko-gray-100 rounded-full overflow-hidden border-2 border-transparent group-hover:border-aiko-teal transition-all">
-                          <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${chat.name}`} alt="" />
-                        </div>
-                        <div className="flex-1">
-                          <div className="flex items-center justify-between mb-1">
-                            <h4 className="font-black text-aiko-navy">{chat.name}</h4>
-                            <span className="text-[10px] font-bold text-aiko-navy/30">{chat.time}</span>
+                  {!activeChatUser ? (
+                    <>
+                      <SectionTitle title={t.nav_messages} i18nTitleKey="nav_messages" />
+                      <div className="space-y-2">
+                        {conversations.map((conv, i) => (
+                          <div
+                            key={i}
+                            onClick={() => handleOpenChat(conv.otherUser)}
+                            className="flex items-center gap-4 p-4 hover:bg-white rounded-2xl cursor-pointer transition-colors group"
+                          >
+                            <div className="w-14 h-14 bg-aiko-gray-100 rounded-full overflow-hidden border-2 border-transparent group-hover:border-aiko-teal transition-all">
+                              <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${conv.otherUser.name}`} alt="" />
+                            </div>
+                            <div className="flex-1">
+                              <div className="flex items-center justify-between mb-1">
+                                <h4 className="font-black text-aiko-navy">{conv.otherUser.name}</h4>
+                                <span className="text-[10px] font-bold text-aiko-navy/30">
+                                  {new Date(conv.lastMessage.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                                </span>
+                              </div>
+                              <p className={`text-xs ${conv.unreadCount > 0 ? "font-black text-aiko-navy" : "font-medium text-aiko-navy/40"} truncate`}>
+                                {conv.lastMessage.text}
+                              </p>
+                            </div>
+                            {conv.unreadCount > 0 && (
+                              <div className="w-5 h-5 bg-aiko-orange rounded-full flex items-center justify-center text-[10px] font-black text-white">
+                                {conv.unreadCount}
+                              </div>
+                            )}
                           </div>
-                          <p className={`text-xs ${chat.unread ? 'font-black text-aiko-navy' : 'font-medium text-aiko-navy/40'} truncate`}>{chat.msg}</p>
-                        </div>
-                        {chat.unread > 0 && (
-                          <div className="w-5 h-5 bg-aiko-orange rounded-full flex items-center justify-center text-[10px] font-black text-white">
-                            {chat.unread}
+                        ))}
+                        {conversations.length === 0 && (
+                          <div className="text-center py-20 text-aiko-navy/20">
+                            <MessageCircle size={48} className="mx-auto mb-4 opacity-10" />
+                            <p className="font-bold">{isRTL ? "لا توجد محادثات بعد" : "No conversations yet"}</p>
                           </div>
                         )}
                       </div>
-                    ))}
-                  </div>
+                    </>
+                  ) : (
+                    <div className="flex flex-col h-[70vh]">
+                      <div className="flex items-center gap-4 mb-6">
+                        <button
+                          onClick={() => setActiveChatUser(null)}
+                          className="w-10 h-10 rounded-xl bg-aiko-gray-100 flex items-center justify-center text-aiko-navy"
+                        >
+                          <ArrowLeft size={20} className={isRTL ? "rotate-180" : ""} />
+                        </button>
+                        <div className="flex items-center gap-3">
+                          <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${activeChatUser.name}`} className="w-10 h-10 rounded-full bg-aiko-gray-100" alt="" />
+                          <div>
+                            <h4 className="font-black text-aiko-navy leading-none">{activeChatUser.name}</h4>
+                            <span className="text-[10px] font-bold text-aiko-teal uppercase tracking-widest">{activeChatUser.role}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="bg-aiko-teal/5 p-4 rounded-2xl mb-4">
+                         <p className="text-xs font-black text-aiko-teal mb-2">{isRTL ? "اترك تقييما لهذا الشخص" : "Leave a review for this user"}</p>
+                         <div className="flex gap-2 mb-2">
+                           {[1,2,3,4,5].map(s => (
+                             <button key={s} onClick={() => handleReviewUser(activeChatUser.id, s, "")} className="text-aiko-orange"><Star size={16} fill="currentColor" /></button>
+                           ))}
+                         </div>
+                      </div>
+
+                      <div className="flex-1 overflow-y-auto space-y-4 pr-2 no-scrollbar">
+                        {chatMessages.map((msg, i) => (
+                          <div
+                            key={i}
+                            className={`flex ${msg.senderId === currentUser.id ? "justify-end" : "justify-start"}`}
+                          >
+                            <div className={`max-w-[80%] p-4 rounded-2xl text-sm font-bold shadow-sm ${
+                              msg.senderId === currentUser.id
+                                ? "bg-aiko-teal text-white rounded-br-none"
+                                : "bg-white text-aiko-navy rounded-bl-none"
+                            }`}>
+                              {msg.text}
+                              <div className={`text-[8px] mt-1 opacity-50 ${msg.senderId === currentUser.id ? "text-right" : "text-left"}`}>
+                                {new Date(msg.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+
+                      <div className="mt-4 flex gap-2">
+                        <input
+                          type="text"
+                          value={newMessageText}
+                          onChange={(e) => setNewMessageText(e.target.value)}
+                          onKeyPress={(e) => e.key === "Enter" && handleSendMessage()}
+                          placeholder={isRTL ? "اكتب رسالتك..." : "Type your message..."}
+                          className="flex-1 bg-white border-2 border-aiko-gray-100 rounded-2xl px-4 py-3 text-sm font-bold focus:outline-none focus:border-aiko-teal"
+                        />
+                        <button
+                          onClick={handleSendMessage}
+                          className="w-12 h-12 bg-aiko-teal text-white rounded-2xl flex items-center justify-center hover:bg-aiko-teal-dark transition-all"
+                        >
+                          <Send size={20} className={isRTL ? "rotate-180" : ""} />
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </motion.div>
               )}
 
@@ -1861,7 +2094,19 @@ export default function App() {
                           label={isRTL ? "الاسم الكامل" : "Full Name"} 
                           icon={UserIcon} 
                           value={profileData.name} 
-                          onChange={(val) => setProfileData({...profileData, name: val})}
+                          onChange={(val: string) => setProfileData({...profileData, name: val})}
+                        />
+                        <FormInput
+                          label={isRTL ? "البريد الإلكتروني" : "Email"}
+                          icon={Mail}
+                          value={profileData.email}
+                          onChange={(val: string) => setProfileData({...profileData, email: val})}
+                        />
+                        <FormInput
+                          label={isRTL ? "رقم الهاتف" : "Phone Number"}
+                          icon={Phone}
+                          value={profileData.phone}
+                          onChange={(val: string) => setProfileData({...profileData, phone: val})}
                         />
                         <div className="space-y-2">
                           <label className="text-[10px] font-black uppercase tracking-widest text-aiko-navy/40 px-6 block">
@@ -1870,7 +2115,7 @@ export default function App() {
                           <textarea 
                             className="w-full bg-aiko-gray-50 rounded-[2rem] p-6 text-sm font-bold text-aiko-navy focus:outline-none focus:ring-4 focus:ring-aiko-teal/5 min-h-[140px] resize-none border-2 border-transparent focus:border-aiko-teal/20 transition-all"
                             value={profileData.bio}
-                            onChange={(e) => setProfileData({...profileData, bio: e.target.value})}
+                            onChange={(e: any) => setProfileData({...profileData, bio: e.target.value})}
                           />
                         </div>
                         <FormSelect 
@@ -1878,7 +2123,7 @@ export default function App() {
                           icon={Grid} 
                           options={categories.map(c => c.label)}
                           value={categories.find(c => c.id === category)?.label || ''}
-                          onChange={(val) => {
+                          onChange={(val: string) => {
                             const cat = categories.find(c => c.label === val);
                             if (cat) setCategory(cat.id);
                           }}
@@ -1893,10 +2138,7 @@ export default function App() {
                           {isRTL ? "إلغاء" : "Cancel"}
                         </button>
                         <button 
-                          onClick={() => {
-                            setIsEditingProfile(false);
-                            showToast(isRTL ? 'تم حفظ التغييرات بنجاح' : 'Changes saved successfully');
-                          }}
+                          onClick={handleUpdateProfile}
                           className="flex-[2] py-5 rounded-[2rem] bg-aiko-teal text-white font-black text-sm uppercase tracking-widest hover:bg-aiko-teal-dark transition-all shadow-xl shadow-aiko-teal/20"
                         >
                           {isRTL ? "حفظ التغييرات" : "Save Changes"}
@@ -1924,7 +2166,7 @@ export default function App() {
                         </div>
                         <div className="flex justify-center gap-8 relative z-10">
                           <div className="text-center group/stat cursor-pointer">
-                            <p className="text-xl font-black text-aiko-navy group-hover:text-aiko-teal transition-colors">4.9</p>
+                            <p className="text-xl font-black text-aiko-navy group-hover:text-aiko-teal transition-colors">{currentUser?.rating || "5.0"}</p>
                             <p className="text-[10px] font-black uppercase tracking-widest text-aiko-navy/30 mb-1">{isRTL ? "التقييم" : "Rating"}</p>
                             <div className="flex gap-0.5 justify-center mt-1 text-aiko-orange">
                               {[...Array(5)].map((_, i) => <Star key={i} size={10} fill="currentColor" />)}
@@ -1985,7 +2227,15 @@ export default function App() {
                               </div>
                             </div>
                           ))}
-                          <button className="aspect-video rounded-3xl border-4 border-dashed border-aiko-gray-100 flex flex-col items-center justify-center gap-2 text-aiko-navy/20 hover:border-aiko-teal/20 hover:text-aiko-teal transition-all">
+                          <button
+                             onClick={() => {
+                               const url = prompt(isRTL ? "أدخل رابط الصورة:" : "Enter image URL:");
+                               if (url) {
+                                 setProfileData({...profileData, portfolio: [...profileData.portfolio, url]});
+                               }
+                             }}
+                             className="aspect-video rounded-3xl border-4 border-dashed border-aiko-gray-100 flex flex-col items-center justify-center gap-2 text-aiko-navy/20 hover:border-aiko-teal/20 hover:text-aiko-teal transition-all"
+                          >
                             <Camera size={32} />
                             <span className="text-[10px] font-black uppercase tracking-widest">{isRTL ? "إضافة" : "Add"}</span>
                           </button>
@@ -1995,48 +2245,6 @@ export default function App() {
                       <div className="space-y-6">
                         <SectionTitle title={isRTL ? "الآراء والتقييمات" : "Ratings & Reviews"} />
                         
-                        {/* New Review Input */}
-                        <div className="bento-card p-6 space-y-4 border-2 border-aiko-teal/10 bg-aiko-teal/5">
-                           <h4 className="text-sm font-black text-aiko-navy">{isRTL ? "أضف تقييمًا جديدًا" : "Add a new review"}</h4>
-                           <div className="flex gap-2">
-                             {[1,2,3,4,5].map(s => (
-                               <button 
-                                key={s} 
-                                onClick={() => setNewReview({...newReview, rating: s})}
-                                className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${newReview.rating >= s ? 'bg-aiko-orange text-white' : 'bg-white text-aiko-navy/20'}`}
-                               >
-                                 <Star size={18} fill={newReview.rating >= s ? "currentColor" : "none"} />
-                               </button>
-                             ))}
-                           </div>
-                           <div className="relative">
-                             <textarea 
-                              className="w-full bg-white rounded-2xl p-4 text-xs font-bold text-aiko-navy focus:outline-none min-h-[100px] resize-none"
-                              placeholder={isRTL ? "اكتب رأيك هنا..." : "Write your review here..."}
-                              value={newReview.text}
-                              onChange={(e) => setNewReview({...newReview, text: e.target.value})}
-                             />
-                             <button 
-                              onClick={() => {
-                                if (!newReview.text) return;
-                                const rev = {
-                                  id: Date.now(),
-                                  user: fullName || (isRTL ? "أنا" : "Me"),
-                                  rating: newReview.rating,
-                                  date: isRTL ? "الآن" : "Just now",
-                                  text: newReview.text,
-                                  avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${Date.now()}`
-                                };
-                                setReviews([rev, ...reviews]);
-                                setNewReview({ rating: 5, text: '' });
-                              }}
-                              className="absolute bottom-3 right-3 bg-aiko-teal text-white w-10 h-10 rounded-xl flex items-center justify-center hover:scale-105 active:scale-95 transition-all"
-                             >
-                               <Send size={18} className={isRTL ? 'rotate-180' : ''} />
-                             </button>
-                           </div>
-                        </div>
-
                         <div className="space-y-4">
                           {reviews.map((review, i) => (
                             <div key={review.id} className="bento-card p-6 hover:translate-x-1 transition-transform space-y-4">
@@ -2044,7 +2252,7 @@ export default function App() {
                                 <img src={review.avatar} className="w-12 h-12 rounded-2xl object-cover border-2 border-white shadow-sm" alt="Reviewer" />
                                 <div className="flex-1">
                                   <div className="flex items-center justify-between">
-                                    <h4 className="text-sm font-black text-aiko-navy">{(review as any).name || review.user}</h4>
+                                    <h4 className="text-sm font-black text-aiko-navy">{(review as any).name || review.user} — {isRTL ? "تقييم خارجي" : "External Rating"}</h4>
                                     <span className="text-[10px] font-bold text-aiko-navy/30">{review.date}</span>
                                   </div>
                                   <div className="flex gap-0.5 text-aiko-orange mt-0.5">
@@ -2141,6 +2349,14 @@ export default function App() {
               <nav className="bg-white p-4 rounded-[32px] shadow-huge flex items-center justify-around pointer-events-auto border border-aiko-teal/5">
                 <NavItem icon={userRole === 'worker' ? Globe : Search} label={userRole === 'worker' ? t.nav_jobs : t.nav_workers} active={activeTab === 'feed'} onClick={() => setActiveTab('feed')} i18nKey={userRole === 'worker' ? "nav_jobs" : "nav_workers"} />
                 <NavItem icon={Briefcase} label={userRole === 'worker' ? t.nav_requests : t.nav_myjobs} active={activeTab === 'activity'} onClick={() => setActiveTab('activity')} count={1} i18nKey={userRole === 'worker' ? "nav_requests" : "nav_myjobs"} />
+                <NavItem
+                  icon={MessageCircle}
+                  label={t.nav_messages}
+                  active={activeTab === 'chat'}
+                  onClick={() => setActiveTab('chat')}
+                  count={conversations.reduce((sum, conv) => sum + conv.unreadCount, 0) || undefined}
+                  i18nKey="nav_messages"
+                />
                 <NavItem icon={UserIcon} label={t.nav_profile} active={activeTab === 'profile'} onClick={() => setActiveTab('profile')} i18nKey="nav_profile" />
               </nav>
             </div>
@@ -2367,7 +2583,7 @@ export default function App() {
                 {/* Timing */}
                 <div className="space-y-6">
                   <h4 className="text-xs font-black uppercase tracking-widest text-aiko-navy/30 flex items-center gap-3">
-                    <span className="text-lg">⏰</span>
+                    <Clock size={20} />
                     {isRTL ? 'التوقيت' : 'Timing'}
                   </h4>
                   <div className="grid grid-cols-3 gap-4">
@@ -2391,7 +2607,7 @@ export default function App() {
                 {/* Distance */}
                 <div className="space-y-6">
                   <h4 className="text-xs font-black uppercase tracking-widest text-aiko-navy/30 flex items-center gap-3">
-                    <span className="text-lg">📍</span>
+                    <MapPin size={20} />
                     {isRTL ? 'المسافة' : 'Distance'}
                   </h4>
                   <div className="grid grid-cols-3 gap-4">
@@ -2415,7 +2631,7 @@ export default function App() {
                 {/* Type */}
                 <div className="space-y-6">
                   <h4 className="text-xs font-black uppercase tracking-widest text-aiko-navy/30 flex items-center gap-3">
-                    <span className="text-lg">💼</span>
+                    <Briefcase size={20} />
                     {isRTL ? 'نوع التوظيف' : 'Hiring Type'}
                   </h4>
                   <div className="flex flex-wrap gap-4">
@@ -2438,9 +2654,8 @@ export default function App() {
 
                 {/* Categories */}
                 <div className="space-y-6">
-                  <h4 className="text-xs font-black uppercase tracking-widest text-aiko-navy/30 flex items-center gap-3">
-                    <span className="text-lg">🛠️</span>
-                    {isRTL ? 'التصنيفات' : 'Categories'}
+                  <h4 className="text-xs font-black uppercase tracking-widest text-aiko-navy/40 flex items-center gap-3">
+                    <Settings2 size={20} />
                   </h4>
                   <div className="grid grid-cols-2 gap-3">
                     {SERVICE_CATEGORIES.map(cat => (
@@ -2459,7 +2674,7 @@ export default function App() {
                 {/* Price Range */}
                 <div className="space-y-6">
                   <h4 className="text-xs font-black uppercase tracking-widest text-aiko-navy/30 flex items-center gap-3">
-                    <span className="text-lg">💰</span>
+                    <ImageIcon size={20} />
                     {isRTL ? 'نطاق السعر (DA)' : 'Price Range (DA)'}
                   </h4>
                   <div className="grid grid-cols-2 gap-6">
@@ -2489,7 +2704,7 @@ export default function App() {
                 {/* Rating */}
                 <div className="space-y-6">
                   <h4 className="text-xs font-black uppercase tracking-widest text-aiko-navy/30 flex items-center gap-3">
-                    <span className="text-lg">🌟</span>
+                    <Star size={20} />
                     {isRTL ? 'التقييم الأدنى' : 'Min Rating'}
                   </h4>
                   <div className="grid grid-cols-4 gap-3">
@@ -2592,7 +2807,7 @@ export default function App() {
                   <div className="space-y-1">
                     <h4 className="text-sm font-black text-aiko-navy flex items-center gap-2">
                        {isRTL ? 'طلبات مؤقتة (5 دقائق للرد)' : 'Instant Requests (5min limit)'}
-                       <span className="text-base">⏳</span>
+                       <Clock size={20} />
                     </h4>
                     <div className="flex items-center gap-2">
                       <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
@@ -2713,7 +2928,7 @@ function RoleChoice({ icon: Icon, title, sub, description, active, onClick, i18n
       <p className="text-sm font-medium text-aiko-navy/40 leading-relaxed mb-6 flex-1" data-i18n={i18nDescKey}>{description}</p>
       
       <div className={`flex items-center gap-3 transition-all duration-500 ${active ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
-        <span className="text-[10px] font-black text-aiko-teal uppercase tracking-widest">{active ? 'PROTOCOL ACTIVE' : 'INITIALIZE'}</span>
+        <span className="text-[10px] font-black text-aiko-teal uppercase tracking-widest">{active ? "PROTOCOL ACTIVE" : "INITIALIZE"}</span>
         <div className="h-[2px] flex-1 bg-aiko-teal/10 relative overflow-hidden">
           <motion.div 
             animate={{ x: ["-100%", "100%"] }}
