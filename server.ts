@@ -52,13 +52,21 @@ async function startServer() {
 
   const authLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
-    max: 5,
-    message: { error: true, message: "Too many login/register attempts, please try again after 15 minutes.", code: 429 }
+    max: 100,
+    message: {
+      error: true,
+      message: "حاولت كثيراً، انتظر 15 دقيقة / Trop de tentatives, attendez 15 minutes / Too many attempts, wait 15 minutes",
+      code: 429
+    }
   });
 
-  app.use("/api/", globalLimiter);
+  app.get("/api/health", (req, res) => {
+    res.json({ status: "ok" });
+  });
+
   app.use("/api/auth/login", authLimiter);
   app.use("/api/auth/register", authLimiter);
+  app.use("/api/", globalLimiter);
 
   // Body Parsing
   app.use(express.json({ limit: '10mb' }));
@@ -167,10 +175,6 @@ async function startServer() {
   app.use("/api/reviews", reviewRoutes);
   app.use("/api/notifications", notificationRoutes);
   app.use("/api/availability", availabilityRoutes);
-
-  app.get("/api/health", (req, res) => {
-    res.json({ status: "ok" });
-  });
 
   // Global Error Handler
   app.use(errorHandler);
