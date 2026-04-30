@@ -5,9 +5,9 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { io, Socket } from "socket.io-client";
-import { 
-  Briefcase, 
+import { io, Socket } from 'socket.io-client';
+import {
+Briefcase,
   Search, 
   MessageCircle, 
   Lock,
@@ -194,52 +194,6 @@ const SERVICE_CATEGORIES = [
   }
 ];
 
-const MOCK_NOTIFICATIONS = [
-  {
-    id: 1,
-    title_ar: 'طلب مؤقت جديد!',
-    title_en: 'New Instant Request!',
-    desc_ar: 'خالد بن عمر يعرض عليك 3,000 DA لمهمة سباكة - لديك 5 دقائق للرد',
-    desc_en: 'Khaled Ben Omar offers you 3,000 DA for a plumbing task - You have 5 mins to respond',
-    time_ar: 'منذ دقيقتين',
-    time_en: '2m ago',
-    type: 'instant',
-    read: false
-  },
-  {
-    id: 2,
-    title_ar: 'طلب عمل جديد في مجالك',
-    title_en: 'New job in your field',
-    desc_ar: 'شركة البناء الحديث تبحث عن سباك في باب الزوار - 2500 DA ليوم واحد',
-    desc_en: 'Modern Construction is looking for a plumber in Bab Ezzouar - 2500 DA for 1 day',
-    time_ar: 'منذ 15 دقيقة',
-    time_en: '15m ago',
-    type: 'job',
-    read: false
-  },
-  {
-    id: 3,
-    title_ar: 'تم قبول طلبك!',
-    title_en: 'Request Accepted!',
-    desc_ar: 'عائلة بن عمر قبلت طلبك لوظيفة مدرس رياضيات - ابدأ غداً الساعة 9:00',
-    desc_en: 'Ben Omar family accepted your request for Math tutor - start tomorrow at 9:00',
-    time_ar: 'منذ 2 ساعة',
-    time_en: '2h ago',
-    type: 'accepted',
-    read: false
-  },
-  {
-    id: 4,
-    title_ar: 'تقييم جديد',
-    title_en: 'New Rating',
-    desc_ar: 'خالد بلعباس أعطاك 5 نجوم: "عمل ممتاز وجودة عالية"',
-    desc_en: 'Khaled Belabbas gave you 5 stars: "Excellent work and high quality"',
-    time_ar: 'أمس',
-    time_en: 'Yesterday',
-    type: 'rating',
-    read: true
-  }
-];
 
 // --- Types ---
 type Language = 'en' | 'fr' | 'ar';
@@ -612,13 +566,17 @@ const CategoryChip = ({ icon: Icon, label, active, onClick }: any) => (
   </button>
 );
 
-const NavItem = ({ icon: Icon, label, active, onClick, count, i18nKey }: any) => (
+const NavItem = ({ icon: Icon, label, active, onClick, count, i18nKey, avatar }: any) => (
   <button 
     onClick={onClick}
     className={`flex flex-col items-center gap-1.5 px-4 py-2 rounded-2xl transition-all duration-300 ${active ? 'bg-aiko-teal-bg text-aiko-teal' : 'text-aiko-navy/30 hover:text-aiko-navy'}`}
   >
-    <div className="relative">
-      <Icon size={20} strokeWidth={active ? 2.5 : 1.5} />
+    <div className="relative w-5 h-5 flex items-center justify-center">
+      {avatar ? (
+        <img src={avatar} className={`w-5 h-5 rounded-full object-cover ${active ? 'ring-2 ring-aiko-teal' : 'opacity-50'}`} alt="" />
+      ) : (
+        <Icon size={20} strokeWidth={active ? 2.5 : 1.5} />
+      )}
       {count && <span className="absolute -top-1 -right-1 w-4 h-4 bg-aiko-orange text-white text-[8px] font-black rounded-full border-2 border-white flex items-center justify-center">{count}</span>}
     </div>
     <span className="text-[9px] font-black uppercase tracking-widest leading-none" data-i18n={i18nKey}>{label}</span>
@@ -1326,7 +1284,10 @@ export default function App() {
           title: workerAvailability?.title || "Professional",
           description: workerAvailability?.description || "Ready to work",
           hourlyRate: parseFloat(workerSettings.price),
-          dailyRate: null
+          dailyRate: null,
+          type: workerSettings.type,
+          startTime: workerSettings.startTime,
+          endTime: workerSettings.endTime
         })
       });
 
@@ -1447,6 +1408,15 @@ export default function App() {
               if (data) {
                 setWorkerAvailability(data);
                 setIsAvailable(data.isAvailable);
+                // Sync settings
+                setWorkerSettings({
+                  type: data.type || 'now',
+                  price: data.hourlyRate?.toString() || '1500',
+                  startTime: data.startTime || '08:00',
+                  endTime: data.endTime || '17:00',
+                  selectedCategory: data.category || 'home_repair',
+                  skills: data.subcategories || ['hr_0']
+                });
               }
             }
           }
@@ -1495,21 +1465,14 @@ export default function App() {
     };
   }, [socket, activeChatUser]);
 
-  const [workerSettings, setWorkerSettings] = useState(() => {
-    const cached = localStorage.getItem('aiko_worker_settings');
-    return cached ? JSON.parse(cached) : {
-      type: 'now',
-      price: '1500',
-      startTime: '08:00',
-      endTime: '17:00',
-      selectedCategory: 'home_repair',
-      skills: ['hr_0']
-    };
+  const [workerSettings, setWorkerSettings] = useState({
+    type: 'now',
+    price: '1500',
+    startTime: '08:00',
+    endTime: '17:00',
+    selectedCategory: 'home_repair',
+    skills: ['hr_0']
   });
-
-  useEffect(() => {
-    localStorage.setItem('aiko_worker_settings', JSON.stringify(workerSettings));
-  }, [workerSettings]);
   const [filters, setFilters] = useState({
     time: 'now',
     distance: '2km',
@@ -1519,21 +1482,6 @@ export default function App() {
     rating: '4.5'
   });
 
-  const jobsData = [
-    { id: 1, title: 'سباك متنقل مطلوب', company: 'شركة البناء الحديث', location: 'باب الزوار', price: '2500 DA', time: '15m ago', type: isRTL ? 'عاجل' : 'Urgent', icon: Hammer, cat: 'home_repair', urgent: true },
-    { id: 2, title: 'فني تكييف مركزي', company: 'الفصول الأربعة', location: 'حيدرة', price: '4000 DA', time: '1h ago', type: isRTL ? 'دوام جزئي' : 'Part-time', icon: Laptop, cat: 'home_repair' },
-    { id: 3, title: 'مطور واجهات React', company: 'تيك الجزاير', location: 'سيدي يحيى', price: '8000 DA', time: '3h ago', type: isRTL ? 'عن بعد' : 'Remote', icon: Laptop, cat: 'tech' },
-    { id: 4, title: 'سائق شاحنة نقل', company: 'لوجيستيك دزاير', location: 'رويبة', price: '3500 DA', time: '5h ago', type: isRTL ? 'دوام كامل' : 'Full-time', icon: Truck, cat: 'automotive' },
-    { id: 5, title: 'منظف واجهات زجاجية', company: 'بلور صافي', location: 'الشراقة', price: '1500 DA/h', time: '6h ago', type: isRTL ? 'سريع' : 'Quick', icon: Sparkles, cat: 'cleaning' },
-  ];
-
-  const workersData = [
-    { id: 1, name: 'عمر بلقاسم', skill: 'سباك متخصص · 8 سنوات خبرة', rating: 4.9, price: '1500 DA/h', distance: '2.1 km', icon: UserIcon, cat: 'home_repair' },
-    { id: 2, name: 'سارة بن علي', skill: 'مطورة تطبيقات الجوال', rating: 4.7, price: '3000 DA/h', distance: '4.5 km', icon: Laptop, cat: 'tech' },
-    { id: 3, name: 'ياسين حدادي', skill: 'كهربائي معماري', rating: 4.8, price: '2000 DA/h', distance: '1.2 km', icon: Hammer, cat: 'home_repair' },
-    { id: 4, name: 'ليلى عثماني', skill: 'مدرسة لغة إنجليزية', rating: 5.0, price: '1200 DA/h', distance: '3.8 km', icon: GraduationCap, cat: 'education' },
-    { id: 5, name: 'كريم قاصدي', skill: 'ميكانيكي سيارات ألمانية', rating: 4.6, price: '2500 DA/h', distance: '5.0 km', icon: Car, cat: 'automotive' },
-  ];
 
   const filteredJobs = jobs.filter(j =>
     j.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -2213,9 +2161,13 @@ export default function App() {
                 <div className="flex items-center gap-3">
                   <button 
                     onClick={() => setActiveTab('profile')}
-                    className="w-10 h-10 rounded-2xl bg-aiko-gray-100 flex items-center justify-center text-aiko-navy/20 hover:bg-aiko-teal-bg hover:text-aiko-teal transition-all"
+                    className="w-10 h-10 rounded-2xl bg-aiko-gray-100 flex items-center justify-center text-aiko-navy/20 hover:bg-aiko-teal-bg hover:text-aiko-teal transition-all overflow-hidden"
                   >
-                    <UserIcon size={20} />
+                    {currentUser?.avatar ? (
+                      <img src={currentUser.avatar} className="w-full h-full object-cover" alt="" />
+                    ) : (
+                      <UserIcon size={20} />
+                    )}
                   </button>
                   <button 
                     onClick={() => {
@@ -2702,7 +2654,7 @@ export default function App() {
                               onClick={(e) => { e.stopPropagation(); handleViewProfile(conv.otherUser.id); }}
                               className="w-14 h-14 bg-aiko-gray-100 rounded-full overflow-hidden border-2 border-transparent hover:border-aiko-teal transition-all cursor-pointer"
                             >
-                              <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${conv.otherUser.name}`} alt="" />
+                              <img src={conv.otherUser.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${conv.otherUser.name}`} className="w-full h-full object-cover" alt="" />
                             </div>
                             <div className="flex-1">
                               <div className="flex items-center justify-between mb-1">
@@ -3142,7 +3094,7 @@ export default function App() {
                   count={conversations.reduce((sum, conv) => sum + conv.unreadCount, 0) || undefined}
                   i18nKey="nav_messages"
                 />
-                <NavItem icon={UserIcon} label={t.nav_profile} active={activeTab === 'profile'} onClick={() => setActiveTab('profile')} i18nKey="nav_profile" />
+                <NavItem icon={UserIcon} label={t.nav_profile} active={activeTab === 'profile'} onClick={() => setActiveTab('profile')} i18nKey="nav_profile" avatar={currentUser?.avatar} />
               </nav>
             </div>
 

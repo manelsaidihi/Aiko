@@ -99,8 +99,8 @@ router.post('/login', loginValidation, async (req, res) => {
   }
 });
 
-// GET /api/auth/me
-router.get('/me', authenticateRequest, async (req: AuthRequest, res) => {
+// GET /api/auth/me (also aliased as /api/users/me)
+router.get(['/me', '/users/me'], authenticateRequest, async (req: AuthRequest, res) => {
   try {
     const userId = req.user?.id;
 

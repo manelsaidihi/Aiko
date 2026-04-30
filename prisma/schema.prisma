@@ -44,6 +44,9 @@ model WorkerAvailability {
   description   String
   hourlyRate    Float
   dailyRate     Float?
+  type          String?   // "now", "part", "full"
+  startTime     String?
+  endTime       String?
   isAvailable   Boolean  @default(true)
   createdAt     DateTime @default(now())
 

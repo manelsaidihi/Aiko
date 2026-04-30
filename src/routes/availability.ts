@@ -22,7 +22,10 @@ router.post('/', authenticateRequest, async (req: AuthRequest, res: Response) =>
       title,
       description,
       hourlyRate,
-      dailyRate
+      dailyRate,
+      type,
+      startTime,
+      endTime
     } = req.body;
 
     if (!category || !wilayas || !title || !description || !hourlyRate) {
@@ -39,6 +42,9 @@ router.post('/', authenticateRequest, async (req: AuthRequest, res: Response) =>
         description,
         hourlyRate: parseFloat(hourlyRate),
         dailyRate: dailyRate ? parseFloat(dailyRate) : null,
+        type,
+        startTime,
+        endTime,
         isAvailable: true
       },
       create: {
@@ -50,6 +56,9 @@ router.post('/', authenticateRequest, async (req: AuthRequest, res: Response) =>
         description,
         hourlyRate: parseFloat(hourlyRate),
         dailyRate: dailyRate ? parseFloat(dailyRate) : null,
+        type,
+        startTime,
+        endTime,
         isAvailable: true
       }
     });
