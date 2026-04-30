@@ -597,12 +597,11 @@ const Logo = ({ size = "md", invert = false }: { size?: "sm" | "md" | "lg" | "xl
     <div className={`flex items-center gap-4 group cursor-pointer ${invert ? 'flex-col sm:flex-row' : ''}`}>
       <div className={`${dimensions} relative bg-white rounded-2xl flex items-center justify-center shadow-md p-1`}>
         <svg viewBox="0 0 100 100" className="w-full h-full overflow-visible">
-          {/* Refined Aiko Logo matching the image: Thick Mobius "A" */}
           {/* Dark Teal Arm */}
           <path 
             d="M30 75 C20 75 20 60 50 20 C65 40 70 55 58 68 C50 78 45 78 40 68" 
             fill="none" 
-            stroke="#0C6E6E" 
+            stroke="#0F6E6E"
             strokeWidth="16" 
             strokeLinecap="round"
           />
@@ -610,10 +609,9 @@ const Logo = ({ size = "md", invert = false }: { size?: "sm" | "md" | "lg" | "xl
           <path 
             d="M50 20 C80 20 85 60 70 75 C60 85 45 75 52 55" 
             fill="none" 
-            stroke="#4DC8C8" 
+            stroke="#4DBFBF"
             strokeWidth="16" 
-            strokeLinecap="round" 
-            className="opacity-90"
+            strokeLinecap="round"
           />
           {/* Center Connector Dot: Orange #F5A623 */}
           <circle cx="50" cy="55" r="8" fill="#F5A623" />
@@ -1997,9 +1995,22 @@ export default function App() {
                   <div className="text-right">
                     <h3 className="text-lg font-black text-aiko-navy leading-none">Aiko</h3>
                   </div>
-                  <div className="w-10 h-10 bg-aiko-teal rounded-2xl flex items-center justify-center p-2">
+                  <div className="w-10 h-10 bg-white rounded-2xl flex items-center justify-center p-2 shadow-sm">
                     <svg viewBox="0 0 100 100" className="w-full h-full overflow-visible">
-                      <path d="M30 75 C20 75 20 60 50 20 C65 40 70 55 58 68 C50 78 45 78 40 68" fill="none" stroke="white" strokeWidth="16" strokeLinecap="round" />
+                      <path
+                        d="M30 75 C20 75 20 60 50 20 C65 40 70 55 58 68 C50 78 45 78 40 68"
+                        fill="none"
+                        stroke="#0F6E6E"
+                        strokeWidth="16"
+                        strokeLinecap="round"
+                      />
+                      <path
+                        d="M50 20 C80 20 85 60 70 75 C60 85 45 75 52 55"
+                        fill="none"
+                        stroke="#4DBFBF"
+                        strokeWidth="16"
+                        strokeLinecap="round"
+                      />
                       <circle cx="50" cy="55" r="8" fill="#F5A623" />
                     </svg>
                   </div>
