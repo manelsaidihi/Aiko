@@ -102,6 +102,7 @@ router.get('/worker/:workerId', async (req, res) => {
       include: {
         employer: {
           select: {
+            id: true,
             name: true
           }
         },
