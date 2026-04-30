@@ -9,7 +9,7 @@ const router = Router();
 // POST /api/auth/register
 router.post('/register', registerValidation, async (req, res) => {
   try {
-    const { name, email, password, role, phone } = req.body;
+    const { name, email, password, role, phone, location } = req.body;
 
     const existingUser = await prisma.user.findUnique({
       where: { email }
@@ -27,9 +27,8 @@ router.post('/register', registerValidation, async (req, res) => {
         email,
         passwordHash,
         role,
-        // Optional phone can be stored in skills or a metadata field if not in schema,
-        // but based on the User model in schema.prisma, we only have certain fields.
-        // Let's stick to the schema fields.
+        phone,
+        location
       }
     });
 

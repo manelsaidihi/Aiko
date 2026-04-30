@@ -276,6 +276,100 @@ router.patch('/:id/complete', authenticateRequest, async (req: AuthRequest, res:
   }
 });
 
+// POST /api/services/instant (يتطلب auth - employer فقط)
+router.post('/instant', authenticateRequest, async (req: AuthRequest, res: Response) => {
+  try {
+    const { title, category, wilaya, description } = req.body;
+    const userId = req.user?.id;
+    const userRole = req.user?.role;
+
+    if (userRole !== 'employer') {
+      return res.status(403).json({ error: 'Only employers can create instant requests' });
+    }
+
+    const serviceRequest = await prisma.serviceRequest.create({
+      data: {
+        title,
+        description,
+        category,
+        wilaya,
+        location: 'Instant Request',
+        budget: 'Instant',
+        employerId: userId!,
+        status: 'open'
+      }
+    });
+
+    const io = req.app.get('io');
+
+    // Notify available workers in the same category and wilaya
+    const availableWorkers = await prisma.workerAvailability.findMany({
+      where: {
+        category,
+        isAvailable: true,
+        wilayas: {
+          has: wilaya
+        }
+      },
+      select: { workerId: true }
+    });
+
+    for (const avail of availableWorkers) {
+      await sendNotification(io, {
+        userId: avail.workerId,
+        type: 'new_request',
+        title: 'طلب فوري جديد!',
+        body: `هناك طلب فوري في منطقتك: ${title}`,
+        data: { requestId: serviceRequest.id, isInstant: true }
+      });
+    }
+
+    res.status(201).json(serviceRequest);
+  } catch (error) {
+    console.error('Create instant request error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// GET /api/services/instant/active (يتطلب auth - worker فقط)
+router.get('/instant/active', authenticateRequest, async (req: AuthRequest, res: Response) => {
+  try {
+    const { wilaya, category } = req.query;
+    const userRole = req.user?.role;
+
+    if (userRole !== 'worker') {
+      return res.status(403).json({ error: 'Only workers can view active instant requests' });
+    }
+
+    const where: any = {
+      status: 'open',
+      location: 'Instant Request' // Identifying mark for instant requests
+    };
+
+    if (wilaya) where.wilaya = wilaya;
+    if (category) where.category = category;
+
+    const instantRequests = await prisma.serviceRequest.findMany({
+      where,
+      orderBy: { createdAt: 'desc' },
+      include: {
+        employer: {
+          select: {
+            id: true,
+            name: true,
+            rating: true
+          }
+        }
+      }
+    });
+
+    res.json(instantRequests);
+  } catch (error) {
+    console.error('Get active instant requests error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // PUT /api/services/:id (يتطلب auth - employer صاحب الطلب فقط)
 router.put('/:id', authenticateRequest, createServiceValidation, async (req: AuthRequest, res: Response) => {
   try {
