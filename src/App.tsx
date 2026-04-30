@@ -2041,7 +2041,7 @@ export default function App() {
                         <div className="relative z-10">
                           <div className="flex items-center justify-between">
                             <div>
-                              <h3 className="text-2xl font-black" data-i18n="greeting">{t.greeting} Mohamed  </h3>
+                              <h3 className="text-2xl font-black" data-i18n="greeting">{t.greeting} {currentUser?.name}  </h3>
                               <p className="text-white/60 font-bold text-sm mt-1" data-i18n={isAvailable ? "avail_on" : "avail_off"}>{isAvailable ? t.avail_on : t.avail_off}</p>
                             </div>
                             <div 
