@@ -276,4 +276,76 @@ router.patch('/:id/complete', authenticateRequest, async (req: AuthRequest, res:
   }
 });
 
+// PUT /api/services/:id (يتطلب auth - employer صاحب الطلب فقط)
+router.put('/:id', authenticateRequest, createServiceValidation, async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { title, description, category, subcategory, location, budget, wilaya } = req.body;
+    const userId = req.user?.id;
+
+    const service = await prisma.serviceRequest.findUnique({
+      where: { id }
+    });
+
+    if (!service) {
+      return res.status(404).json({ error: 'Service request not found' });
+    }
+
+    if (service.employerId !== userId) {
+      return res.status(403).json({ error: 'Unauthorized to edit this request' });
+    }
+
+    const updatedService = await prisma.serviceRequest.update({
+      where: { id },
+      data: {
+        title,
+        description,
+        category,
+        subcategory,
+        location,
+        budget,
+        wilaya
+      }
+    });
+
+    res.json(updatedService);
+  } catch (error) {
+    console.error('Update service request error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// DELETE /api/services/:id (يتطلب auth - employer صاحب الطلب فقط)
+router.delete('/:id', authenticateRequest, async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user?.id;
+
+    const service = await prisma.serviceRequest.findUnique({
+      where: { id }
+    });
+
+    if (!service) {
+      return res.status(404).json({ error: 'Service request not found' });
+    }
+
+    if (service.employerId !== userId) {
+      return res.status(403).json({ error: 'Unauthorized to delete this request' });
+    }
+
+    if (service.status !== 'open') {
+      return res.status(400).json({ error: 'Only open requests can be deleted' });
+    }
+
+    await prisma.serviceRequest.delete({
+      where: { id }
+    });
+
+    res.json({ message: 'Service request deleted successfully' });
+  } catch (error) {
+    console.error('Delete service request error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 export default router;

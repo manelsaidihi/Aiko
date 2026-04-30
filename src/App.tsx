@@ -860,6 +860,8 @@ export default function App() {
 
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [showPostJobModal, setShowPostJobModal] = useState(false);
+  const [isEditingService, setIsEditingService] = useState(false);
+  const [editingServiceId, setEditingServiceId] = useState<string | null>(null);
   const [serviceData, setServiceData] = useState({
     title: '',
     description: '',
@@ -1040,8 +1042,11 @@ export default function App() {
 
   const handleCreateService = async () => {
     try {
-      const response = await fetch("/api/services", {
-        method: "POST",
+      const url = isEditingService ? `/api/services/${editingServiceId}` : "/api/services";
+      const method = isEditingService ? "PUT" : "POST";
+
+      const response = await fetch(url, {
+        method: method,
         headers: {
           "Content-Type": "application/json",
           "Authorization": `Bearer ${authService.getToken()}`
@@ -1049,17 +1054,42 @@ export default function App() {
         body: JSON.stringify(serviceData)
       });
       if (response.ok) {
-        showToast(isRTL ? "تم نشر الطلب بنجاح" : "Service request posted successfully");
+        showToast(isRTL ? "تمت العملية بنجاح" : "Service request processed successfully");
         setShowPostJobModal(false);
+        setIsEditingService(false);
+        setEditingServiceId(null);
         setServiceData({ title: '', description: '', category: '', location: '', budget: '', wilaya: '' });
         fetchMyRequests();
       } else {
         const err = await response.json();
-        showToast(err.error || "Failed to post service", "error");
+        showToast(err.error || "Failed to process service", "error");
       }
     } catch (err) {
-      console.error("Error creating service:", err);
-      showToast("Error creating service", "error");
+      console.error("Error processing service:", err);
+      showToast("Error processing service", "error");
+    }
+  };
+
+  const handleDeleteService = async (id: string) => {
+    if (!window.confirm(isRTL ? "هل أنت متأكد من حذف هذا الطلب؟" : "Are you sure you want to delete this request?")) return;
+
+    try {
+      const response = await fetch(`/api/services/${id}`, {
+        method: "DELETE",
+        headers: {
+          "Authorization": `Bearer ${authService.getToken()}`
+        }
+      });
+      if (response.ok) {
+        showToast(isRTL ? "تم حذف الطلب بنجاح" : "Service request deleted successfully");
+        fetchMyRequests();
+      } else {
+        const err = await response.json();
+        showToast(err.error || "Failed to delete service", "error");
+      }
+    } catch (err) {
+      console.error("Error deleting service:", err);
+      showToast("Error deleting service", "error");
     }
   };
 
@@ -2301,7 +2331,37 @@ export default function App() {
                           </div>
                           <div>
                             <h4 className="font-black text-aiko-navy">{req.title}</h4>
-                            <p className="text-xs font-bold text-aiko-navy/40">{isRTL ? (req.status === 'open' ? 'مفتوح' : req.status === 'assigned' ? 'تم التعيين' : 'مكتمل') : req.status}</p>
+                            <div className="flex items-center gap-2">
+                              <p className="text-xs font-bold text-aiko-navy/40">{isRTL ? (req.status === 'open' ? 'مفتوح' : req.status === 'assigned' ? 'تم التعيين' : 'مكتمل') : req.status}</p>
+                              {userRole === 'employer' && req.status === 'open' && (
+                                <div className="flex items-center gap-2 ml-2">
+                                  <button
+                                    onClick={() => {
+                                      setEditingServiceId(req.id);
+                                      setIsEditingService(true);
+                                      setServiceData({
+                                        title: req.title,
+                                        description: req.description,
+                                        category: req.category,
+                                        location: req.location,
+                                        budget: req.budget,
+                                        wilaya: req.wilaya
+                                      });
+                                      setShowPostJobModal(true);
+                                    }}
+                                    className="text-[10px] font-black text-aiko-teal hover:underline"
+                                  >
+                                    {isRTL ? "تعديل" : "Edit"}
+                                  </button>
+                                  <button
+                                    onClick={() => handleDeleteService(req.id)}
+                                    className="text-[10px] font-black text-red-500 hover:underline"
+                                  >
+                                    {isRTL ? "حذف" : "Delete"}
+                                  </button>
+                                </div>
+                              )}
+                            </div>
                           </div>
                         </div>
                         <div className="flex flex-col items-end gap-2">
@@ -3027,8 +3087,23 @@ export default function App() {
                     className="relative w-full max-w-lg bg-white rounded-[40px] p-8 shadow-2xl flex flex-col gap-6 max-h-[90vh] overflow-y-auto no-scrollbar"
                   >
                     <div className="flex items-center justify-between">
-                      <h2 className="text-2xl font-black text-aiko-navy">{isRTL ? "نشر طلب خدمة" : "Post Service Request"}</h2>
-                      <button onClick={() => setShowPostJobModal(false)} className="p-2 bg-aiko-gray-100 rounded-xl text-aiko-navy/40 hover:text-aiko-navy transition-all"><X size={20} /></button>
+                      <h2 className="text-2xl font-black text-aiko-navy">
+                        {isEditingService
+                          ? (isRTL ? "تعديل طلب الخدمة" : "Edit Service Request")
+                          : (isRTL ? "نشر طلب خدمة" : "Post Service Request")
+                        }
+                      </h2>
+                      <button
+                        onClick={() => {
+                          setShowPostJobModal(false);
+                          setIsEditingService(false);
+                          setEditingServiceId(null);
+                          setServiceData({ title: '', description: '', category: '', location: '', budget: '', wilaya: '' });
+                        }}
+                        className="p-2 bg-aiko-gray-100 rounded-xl text-aiko-navy/40 hover:text-aiko-navy transition-all"
+                      >
+                        <X size={20} />
+                      </button>
                     </div>
 
                     <div className="space-y-4">
@@ -3088,7 +3163,10 @@ export default function App() {
                       onClick={handleCreateService}
                       className="w-full py-5 rounded-[2rem] bg-aiko-teal text-white font-black text-sm uppercase tracking-widest hover:bg-aiko-teal-dark transition-all shadow-xl shadow-aiko-teal/20 mt-4"
                     >
-                      {isRTL ? "نشر الطلب" : "Post Request"}
+                      {isEditingService
+                        ? (isRTL ? "حفظ التعديلات" : "Save Changes")
+                        : (isRTL ? "نشر الطلب" : "Post Request")
+                      }
                     </button>
                   </motion.div>
                 </div>
