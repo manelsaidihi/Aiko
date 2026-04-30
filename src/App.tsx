@@ -1334,6 +1334,7 @@ export default function App() {
 
     socket.on("notification", (notification) => {
       setNotifications(prev => [notification, ...prev]);
+      showToast(notification.title);
       if (notification.type === 'new_message') {
         fetchConversations();
       }
@@ -2959,6 +2960,19 @@ export default function App() {
                                 handleOpenChat({ id: notif.data.senderId, name: 'User' }); // Minimal mock
                               } else if (notif.type === 'new_request' || notif.type === 'request_assigned' || notif.type === 'request_completed') {
                                 setShowNotification(false);
+                                if (notif.data?.requestId) {
+                                  fetch(`/api/services/${notif.data.requestId}`, {
+                                    headers: { "Authorization": `Bearer ${authService.getToken()}` }
+                                  })
+                                  .then(res => res.json())
+                                  .then(service => {
+                                    if (service && !service.error) {
+                                      const catIcon = SERVICE_CATEGORIES.find(c => c.id === service.category)?.icon || Hammer;
+                                      handleOpenItem({ ...service, icon: catIcon });
+                                    }
+                                  })
+                                  .catch(err => console.error("Error fetching service detail:", err));
+                                }
                                 setActiveTab('activity');
                               } else if (notif.type === 'new_review') {
                                 setShowNotification(false);
