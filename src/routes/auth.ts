@@ -154,4 +154,61 @@ router.patch('/profile', authenticateRequest, async (req: AuthRequest, res) => {
   }
 });
 
+// DELETE /api/auth/account
+router.delete('/account', authenticateRequest, async (req: AuthRequest, res) => {
+  try {
+    const userId = req.user?.id;
+
+    if (!userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    await prisma.$transaction([
+      // 1. Delete notifications
+      prisma.notification.deleteMany({ where: { userId } }),
+
+      // 2. Delete worker availability
+      prisma.workerAvailability.deleteMany({ where: { workerId: userId } }),
+
+      // 3. Delete messages
+      prisma.message.deleteMany({
+        where: {
+          OR: [
+            { senderId: userId },
+            { receiverId: userId }
+          ]
+        }
+      }),
+
+      // 4. Delete reviews
+      prisma.review.deleteMany({
+        where: {
+          OR: [
+            { workerId: userId },
+            { employerId: userId }
+          ]
+        }
+      }),
+
+      // 5. Delete service requests
+      prisma.serviceRequest.deleteMany({
+        where: {
+          OR: [
+            { employerId: userId },
+            { workerId: userId }
+          ]
+        }
+      }),
+
+      // 6. Delete user
+      prisma.user.delete({ where: { id: userId } })
+    ]);
+
+    res.json({ message: "تم حذف الحساب بنجاح" });
+  } catch (error) {
+    console.error('Delete account error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 export default router;

@@ -806,6 +806,7 @@ export default function App() {
   const [showFilters, setShowFilters] = useState(false);
   const [showAvailabilityModal, setShowAvailabilityModal] = useState(false);
   const [showWorkerAvailabilityForm, setShowWorkerAvailabilityForm] = useState(false);
+  const [showDeleteAccountModal, setShowDeleteAccountModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [toast, setToast] = useState<{ message: string, type: 'success' | 'error' } | null>(null);
   const [isRTL, setIsRTL] = useState(lang === "ar");
@@ -1450,6 +1451,27 @@ export default function App() {
   const handleLogout = () => {
     authService.logout();
     window.location.reload();
+  };
+
+  const handleDeleteAccount = async () => {
+    try {
+      const response = await fetch("/api/auth/account", {
+        method: "DELETE",
+        headers: {
+          "Authorization": `Bearer ${authService.getToken()}`
+        }
+      });
+      if (response.ok) {
+        showToast(isRTL ? "تم حذف الحساب بنجاح" : "Account deleted successfully");
+        handleLogout();
+      } else {
+        const err = await response.json();
+        showToast(err.error || "Failed to delete account", "error");
+      }
+    } catch (err) {
+      console.error("Error deleting account:", err);
+      showToast("Error deleting account", "error");
+    }
   };
 
   const categories = [
@@ -2740,6 +2762,13 @@ export default function App() {
                             {t.install_app}
                           </button>
                         )}
+                        <button
+                          onClick={() => setShowDeleteAccountModal(true)}
+                          className="w-full bg-red-500 text-white py-5 rounded-[2rem] uppercase font-black tracking-widest flex items-center justify-center gap-3 shadow-huge hover:bg-red-600 transition-all"
+                        >
+                          <Trash2 size={20} />
+                          {isRTL ? "حذف الحساب" : lang === 'fr' ? "Supprimer le compte" : "Delete Account"}
+                        </button>
                         <button onClick={handleLogout} className="w-full btn-orange py-5 uppercase tracking-widest flex items-center justify-center gap-3 shadow-huge">
                           <Trash2 size={20} />
                           {t.logout}
@@ -2966,6 +2995,57 @@ export default function App() {
 
             <AnimatePresence>
                 {showLocationModal && <LocationModal />}
+            </AnimatePresence>
+
+            {/* Delete Account Confirmation Modal */}
+            <AnimatePresence>
+              {showDeleteAccountModal && (
+                <div className="fixed inset-0 z-[400] flex items-center justify-center p-6">
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    onClick={() => setShowDeleteAccountModal(false)}
+                    className="absolute inset-0 bg-aiko-navy/60 backdrop-blur-md"
+                  />
+                  <motion.div
+                    initial={{ scale: 0.9, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    exit={{ scale: 0.9, opacity: 0 }}
+                    className="relative w-full max-w-sm bg-white rounded-[40px] p-8 shadow-2xl space-y-6 text-center"
+                  >
+                    <div className="w-16 h-16 bg-red-100 text-red-500 rounded-2xl flex items-center justify-center mx-auto">
+                      <Trash2 size={32} />
+                    </div>
+
+                    <div className="space-y-2">
+                      <h3 className="text-2xl font-black text-aiko-navy">
+                        {isRTL ? "هل أنت متأكد؟" : lang === 'fr' ? "Êtes-vous sûr?" : "Are you sure?"}
+                      </h3>
+                      <p className="text-sm font-bold text-aiko-navy/40 leading-relaxed">
+                        {isRTL ? "سيتم حذف حسابك نهائياً ولا يمكن التراجع" :
+                         lang === 'fr' ? "Votre compte sera supprimé définitivement et cette action est irréversible." :
+                         "Your account will be permanently deleted and this action cannot be undone."}
+                      </p>
+                    </div>
+
+                    <div className="flex flex-col gap-3">
+                      <button
+                        onClick={handleDeleteAccount}
+                        className="w-full py-4 rounded-2xl bg-red-500 text-white font-black text-sm uppercase tracking-widest hover:bg-red-600 transition-all"
+                      >
+                        {isRTL ? "تأكيد الحذف" : lang === 'fr' ? "Confirmer la suppression" : "Confirm Deletion"}
+                      </button>
+                      <button
+                        onClick={() => setShowDeleteAccountModal(false)}
+                        className="w-full py-4 rounded-2xl bg-aiko-gray-100 text-aiko-navy font-black text-sm uppercase tracking-widest hover:bg-aiko-gray-200 transition-all"
+                      >
+                        {isRTL ? "إلغاء" : lang === 'fr' ? "Annuler" : "Cancel"}
+                      </button>
+                    </div>
+                  </motion.div>
+                </div>
+              )}
             </AnimatePresence>
 
             {/* Review Modal */}
