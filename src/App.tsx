@@ -49,7 +49,10 @@ import {
   Mail,
   Camera,
   Settings2,
-  Image as ImageIcon
+  Image as ImageIcon,
+  History,
+  LayoutDashboard,
+  UserCheck
 } from 'lucide-react';
 
 // --- Types ---
@@ -622,7 +625,7 @@ const NavItem = ({ icon: Icon, label, active, onClick, count, i18nKey }: any) =>
   </button>
 );
 
-const JobCard = ({ title, company, location, price, time, type, icon: Icon, onApply, lang, onContact, urgent }: any) => {
+const JobCard = ({ title, company, location, price, time, type, icon: Icon, onApply, lang, onContact, urgent, onViewProfile }: any) => {
   const isRTL = lang === 'ar';
   const t = translations[lang as Language];
   
@@ -636,12 +639,20 @@ const JobCard = ({ title, company, location, price, time, type, icon: Icon, onAp
     >
       <div className="flex items-start justify-between gap-4">
         <div className="flex items-center gap-4">
-          <div className="w-14 h-14 bg-aiko-teal-bg text-aiko-teal rounded-2xl flex items-center justify-center shadow-sm group-hover:scale-105 transition-transform duration-500">
+          <div
+            onClick={(e) => { e.stopPropagation(); onViewProfile?.(); }}
+            className="w-14 h-14 bg-aiko-teal-bg text-aiko-teal rounded-2xl flex items-center justify-center shadow-sm group-hover:scale-105 transition-transform duration-500 cursor-pointer"
+          >
             <Icon size={28} />
           </div>
           <div>
             <h4 className="font-extrabold text-aiko-navy line-clamp-1">{title}</h4>
-            <p className="text-xs font-semibold text-aiko-navy/30">{company} · {location}</p>
+            <p
+              onClick={(e) => { e.stopPropagation(); onViewProfile?.(); }}
+              className="text-xs font-semibold text-aiko-navy/30 hover:text-aiko-teal transition-colors cursor-pointer"
+            >
+              {company} · {location}
+            </p>
           </div>
         </div>
         <div className="text-right">
@@ -681,7 +692,7 @@ const JobCard = ({ title, company, location, price, time, type, icon: Icon, onAp
   );
 };
 
-const WorkerCard = ({ name, skill, rating, price, distance, icon: Icon, onOffer, lang, onContact }: any) => {
+const WorkerCard = ({ name, skill, rating, price, distance, icon: Icon, onOffer, lang, onContact, onViewProfile }: any) => {
   const isRTL = lang === 'ar';
   const t = translations[lang as Language];
   
@@ -694,7 +705,12 @@ const WorkerCard = ({ name, skill, rating, price, distance, icon: Icon, onOffer,
     >
       <div className="flex items-start gap-4">
         <div className="flex-1 min-w-0 pr-4">
-          <h4 className="text-xl font-black text-aiko-navy truncate leading-tight">{name}</h4>
+          <h4
+            onClick={() => onViewProfile?.()}
+            className="text-xl font-black text-aiko-navy truncate leading-tight hover:text-aiko-teal transition-colors cursor-pointer"
+          >
+            {name}
+          </h4>
           <p className="text-sm font-bold text-aiko-navy/30 truncate mt-0.5">{skill}</p>
           <div className="flex items-center gap-1.5 mt-2">
             <div className="flex items-center gap-0.5">
@@ -704,7 +720,10 @@ const WorkerCard = ({ name, skill, rating, price, distance, icon: Icon, onOffer,
           </div>
         </div>
         <div className="relative flex-shrink-0">
-          <div className="w-20 h-20 bg-linear-to-br from-aiko-teal-bg to-white text-aiko-teal rounded-[2rem] flex items-center justify-center overflow-hidden border-2 border-white shadow-lg group-hover:scale-105 transition-transform duration-500">
+          <div
+            onClick={() => onViewProfile?.()}
+            className="w-20 h-20 bg-linear-to-br from-aiko-teal-bg to-white text-aiko-teal rounded-[2rem] flex items-center justify-center overflow-hidden border-2 border-white shadow-lg group-hover:scale-105 transition-transform duration-500 cursor-pointer"
+          >
             <Icon size={40} strokeWidth={1} />
           </div>
           <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-aiko-teal rounded-full border-4 border-white shadow-sm flex items-center justify-center">
@@ -1240,6 +1259,11 @@ export default function App() {
         const data = await response.json();
         setViewedUser(data);
         setShowUserProfileModal(true);
+        // Close other overlays for better UX
+        setActiveItem(null);
+        setShowNotification(false);
+        setShowContactModal(false);
+        setShowInstantRequestsModal(false);
       }
     } catch (err) {
       console.error("Error fetching user profile:", err);
@@ -2326,6 +2350,7 @@ export default function App() {
                               setContactTarget(job);
                               setShowContactModal(true);
                             }}
+                            onViewProfile={() => handleViewProfile(job.employer.id)}
                           />
                         ))}
                         {filteredJobs.length === 0 && (
@@ -2416,9 +2441,13 @@ export default function App() {
                               <div className="flex items-center gap-4">
                                 <div
                                   onClick={() => handleViewProfile(avail.worker.id)}
-                                  className="w-14 h-14 bg-aiko-teal-bg text-aiko-teal rounded-2xl flex items-center justify-center cursor-pointer hover:scale-105 transition-transform"
+                                  className="w-14 h-14 bg-aiko-teal-bg text-aiko-teal rounded-2xl flex items-center justify-center cursor-pointer hover:scale-105 transition-transform overflow-hidden"
                                 >
-                                  <UserIcon size={28} />
+                                  <img
+                                    src={avail.worker.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${avail.worker.name}`}
+                                    className="w-full h-full object-cover"
+                                    alt=""
+                                  />
                                 </div>
                                 <div onClick={() => handleViewProfile(avail.worker.id)} className="cursor-pointer">
                                   <h4 className="font-extrabold text-aiko-navy hover:text-aiko-teal transition-colors">{avail.worker.name}</h4>
@@ -2723,7 +2752,7 @@ export default function App() {
                           onClick={() => handleViewProfile(activeChatUser.id)}
                           className="flex items-center gap-3 cursor-pointer group"
                         >
-                          <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${activeChatUser.name}`} className="w-10 h-10 rounded-full bg-aiko-gray-100 group-hover:ring-2 group-hover:ring-aiko-teal transition-all" alt="" />
+                          <img src={activeChatUser.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${activeChatUser.name}`} className="w-10 h-10 rounded-full bg-aiko-gray-100 group-hover:ring-2 group-hover:ring-aiko-teal transition-all object-cover" alt="" />
                           <div>
                             <h4 className="font-black text-aiko-navy leading-none group-hover:text-aiko-teal transition-colors">{activeChatUser.name}</h4>
                             <span className="text-[10px] font-bold text-aiko-teal uppercase tracking-widest">{activeChatUser.role}</span>
@@ -3015,12 +3044,24 @@ export default function App() {
                           {workerReviewsData.reviews.slice(0, 3).map((review) => (
                             <div key={review.id} className="bento-card p-6 hover:translate-x-1 transition-transform space-y-4">
                               <div className="flex items-center gap-3">
-                                <div className="w-12 h-12 bg-aiko-gray-100 rounded-2xl flex items-center justify-center text-aiko-navy/20 border-2 border-white shadow-sm">
-                                  <UserIcon size={24} />
+                                <div
+                                  onClick={() => handleViewProfile(review.employer.id)}
+                                  className="w-12 h-12 bg-aiko-gray-100 rounded-2xl flex items-center justify-center text-aiko-navy/20 border-2 border-white shadow-sm cursor-pointer hover:scale-105 transition-transform overflow-hidden"
+                                >
+                                  <img
+                                    src={review.employer.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${review.employer.name}`}
+                                    className="w-full h-full object-cover"
+                                    alt=""
+                                  />
                                 </div>
                                 <div className="flex-1">
                                   <div className="flex items-center justify-between">
-                                    <h4 className="text-sm font-black text-aiko-navy">{review.employer.name}</h4>
+                                    <h4
+                                      onClick={() => handleViewProfile(review.employer.id)}
+                                      className="text-sm font-black text-aiko-navy hover:text-aiko-teal transition-colors cursor-pointer"
+                                    >
+                                      {review.employer.name}
+                                    </h4>
                                     <span className="text-[10px] font-bold text-aiko-navy/30">{new Date(review.createdAt).toLocaleDateString()}</span>
                                   </div>
                                   <div className="flex gap-0.5 text-aiko-orange mt-0.5">
@@ -3126,12 +3167,28 @@ export default function App() {
                     <button onClick={() => setActiveItem(null)} className="absolute top-6 right-6 p-2 text-aiko-navy/20 hover:text-aiko-navy transition-colors"><X size={24} /></button>
                     
                     <div className="flex flex-col items-center text-center space-y-6 pt-4">
-                      <div className="w-24 h-24 bg-aiko-teal-bg text-aiko-teal rounded-[32px] flex items-center justify-center">
+                      <div
+                        onClick={() => {
+                          if (activeItem.employerId) handleViewProfile(activeItem.employerId);
+                          else if (activeItem.workerId) handleViewProfile(activeItem.workerId);
+                          else if (activeItem.worker?.id) handleViewProfile(activeItem.worker.id);
+                        }}
+                        className="w-24 h-24 bg-aiko-teal-bg text-aiko-teal rounded-[32px] flex items-center justify-center cursor-pointer hover:scale-105 transition-transform"
+                      >
                         <activeItem.icon size={48} />
                       </div>
                       <div>
                         <h3 className="text-2xl font-black text-aiko-navy">{activeItem.title || activeItem.name}</h3>
-                        <p className="text-aiko-navy/40 font-bold">{activeItem.company || activeItem.skill}</p>
+                        <p
+                          onClick={() => {
+                            if (activeItem.employerId) handleViewProfile(activeItem.employerId);
+                            else if (activeItem.workerId) handleViewProfile(activeItem.workerId);
+                            else if (activeItem.worker?.id) handleViewProfile(activeItem.worker.id);
+                          }}
+                          className="text-aiko-navy/40 font-bold hover:text-aiko-teal transition-colors cursor-pointer"
+                        >
+                          {activeItem.company || activeItem.employer?.name || activeItem.skill || activeItem.name}
+                        </p>
                       </div>
                       
                       <div className="grid grid-cols-2 gap-4 w-full">
@@ -3269,12 +3326,23 @@ export default function App() {
                               <div className={`absolute top-1/2 -translate-y-1/2 ${isRTL ? 'right-2' : 'left-2'} w-2 h-2 bg-aiko-teal rounded-full shadow-lg shadow-aiko-teal/40 animate-pulse`} />
                             )}
                             
-                            <div className={`flex-shrink-0 w-16 h-16 rounded-3xl flex items-center justify-center transition-transform group-hover:scale-110 ${
-                              notif.type === 'new_request' ? 'bg-orange-100 text-orange-500' :
-                              notif.type === 'new_message' ? 'bg-blue-100 text-blue-600' :
-                              notif.type === 'request_assigned' || notif.type === 'request_completed' ? 'bg-green-100 text-green-500' :
-                              'bg-purple-100 text-purple-500'
-                            }`}>
+                            <div
+                              onClick={(e) => {
+                                if (notif.type === 'new_message' && notif.data?.senderId) {
+                                  e.stopPropagation();
+                                  handleViewProfile(notif.data.senderId);
+                                } else if (notif.type === 'request_assigned' && notif.data?.workerId) {
+                                  e.stopPropagation();
+                                  handleViewProfile(notif.data.workerId);
+                                }
+                              }}
+                              className={`flex-shrink-0 w-16 h-16 rounded-3xl flex items-center justify-center transition-transform group-hover:scale-110 cursor-pointer ${
+                                notif.type === 'new_request' ? 'bg-orange-100 text-orange-500' :
+                                notif.type === 'new_message' ? 'bg-blue-100 text-blue-600' :
+                                notif.type === 'request_assigned' || notif.type === 'request_completed' ? 'bg-green-100 text-green-500' :
+                                'bg-purple-100 text-purple-500'
+                              }`}
+                            >
                               {notif.type === 'new_request' && <Zap size={28} fill="currentColor" />}
                               {notif.type === 'new_message' && <MessageCircle size={28} />}
                               {(notif.type === 'request_assigned' || notif.type === 'request_completed') && <CheckCircle2 size={28} />}
@@ -3689,7 +3757,12 @@ export default function App() {
                         <div key={req.id} className="bento-card p-6 flex items-center justify-between group hover:border-aiko-teal transition-all">
                           <div>
                             <h4 className="font-black text-aiko-navy">{req.title}</h4>
-                            <p className="text-xs font-bold text-aiko-navy/30">{req.employer.name} · {req.wilaya}</p>
+                            <p
+                              onClick={() => handleViewProfile(req.employerId)}
+                              className="text-xs font-bold text-aiko-navy/30 hover:text-aiko-teal transition-colors cursor-pointer"
+                            >
+                              {req.employer.name} · {req.wilaya}
+                            </p>
                           </div>
                           <button
                             onClick={async () => {
