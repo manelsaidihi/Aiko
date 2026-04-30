@@ -26,14 +26,14 @@ export default defineConfig(({mode}) => {
           scope: '/',
           icons: [
             {
-              src: '/icons/icon-192.svg',
+              src: '/logo.png',
               sizes: '192x192',
-              type: 'image/svg+xml'
+              type: 'image/png'
             },
             {
-              src: '/icons/icon-512.svg',
+              src: '/logo.png',
               sizes: '512x512',
-              type: 'image/svg+xml'
+              type: 'image/png'
             }
           ]
         },
