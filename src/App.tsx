@@ -1206,9 +1206,13 @@ export default function App() {
     }
   };
 
-  const handleUpdateProfile = async () => {
+  const handleUpdateProfile = async (overrideData?: any) => {
     try {
-      const updated = await authService.updateProfile(profileData);
+      const dataToUpdate = overrideData || {
+        ...profileData,
+        location: (wilaya && commune) ? `${wilaya}, ${commune}` : profileData.location
+      };
+      const updated = await authService.updateProfile(dataToUpdate);
       setCurrentUser((prev: any) => ({ ...prev, ...updated }));
       setIsEditingProfile(false);
       showToast(isRTL ? "تم تحديث الملف الشخصي بنجاح" : "Profile updated successfully");
@@ -1245,6 +1249,14 @@ export default function App() {
         avatar: currentUser.avatar || "",
         portfolio: currentUser.portfolio || []
       });
+
+      // Parse location into wilaya and commune
+      if (currentUser.location && currentUser.location.includes(',')) {
+        const [w, c] = currentUser.location.split(',').map((s: string) => s.trim());
+        if (w) setWilaya(w);
+        if (c) setCommune(c);
+      }
+
       if (currentUser.role === 'worker') {
         fetchWorkerReviews(currentUser.id);
       }
@@ -1675,7 +1687,10 @@ export default function App() {
           </div>
 
           <button 
-            onClick={() => setShowLocationModal(false)}
+            onClick={() => {
+              handleUpdateProfile({ location: `${wilaya}, ${commune}` });
+              setShowLocationModal(false);
+            }}
             className="w-full py-5 rounded-[2rem] bg-aiko-teal text-white font-black text-sm uppercase tracking-widest hover:bg-aiko-teal-dark transition-all shadow-lg shadow-aiko-teal/20"
           >
             {isRTL ? "حفظ التغييرات" : "Save Changes"}
@@ -2626,12 +2641,26 @@ export default function App() {
                             onChange={(e: any) => setProfileData({...profileData, bio: e.target.value})}
                           />
                         </div>
-                        <FormInput
-                          label={isRTL ? "الموقع" : "Location"}
-                          icon={MapPin}
-                          value={profileData.location}
-                          onChange={(val: string) => setProfileData({...profileData, location: val})}
-                        />
+                        <div className="grid grid-cols-2 gap-4">
+                          <FormSelect
+                            label={t.wilaya_label}
+                            icon={MapPin}
+                            options={ALGERIA_WILAYAS}
+                            value={wilaya}
+                            onChange={(val: string) => { setWilaya(val); setCommune(''); }}
+                            i18nLabel="wilaya_label"
+                            isRTL={isRTL}
+                          />
+                          <FormSelect
+                            label={t.commune_label}
+                            icon={MapPin}
+                            options={wilaya ? (ALGERIA_LOCATIONS[wilaya] || []) : []}
+                            value={commune}
+                            onChange={setCommune}
+                            i18nLabel="commune_label"
+                            isRTL={isRTL}
+                          />
+                        </div>
                       </div>
 
                       <div className="flex gap-4 pt-4 pb-20">
