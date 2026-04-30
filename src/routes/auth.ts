@@ -133,6 +133,35 @@ router.get('/me', authenticateRequest, async (req: AuthRequest, res) => {
   }
 });
 
+// GET /api/auth/user/:id
+router.get('/user/:id', authenticateRequest, async (req: AuthRequest, res) => {
+  try {
+    const { id } = req.params;
+    const user = await prisma.user.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        name: true,
+        role: true,
+        skills: true,
+        location: true,
+        bio: true,
+        avatar: true,
+        rating: true,
+      }
+    });
+
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    res.json(user);
+  } catch (error) {
+    console.error('Get user profile error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // PATCH /api/auth/profile
 router.patch('/profile', authenticateRequest, async (req: AuthRequest, res) => {
   try {
