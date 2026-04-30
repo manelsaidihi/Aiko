@@ -499,7 +499,7 @@ const FormInput = ({ label, icon: Icon, type = "text", placeholder, value, onCha
       <label className="text-xs font-black uppercase tracking-widest text-aiko-navy/30 mx-2" data-i18n={i18nLabel}>
         {label}
       </label>
-      <div className="flex items-center gap-3 bg-aiko-gray-100 p-4 rounded-2xl border border-transparent focus-within:border-aiko-teal focus-within:bg-white transition-all">
+      <div className="flex items-center gap-3 bg-aiko-gray-100 p-2 rounded-2xl border border-transparent focus-within:border-aiko-teal focus-within:bg-white transition-all">
         <Icon size={18} className="text-aiko-navy/30" />
         <input 
           type={showPasswordToggle ? (show ? "text" : "password") : type} 
@@ -524,7 +524,7 @@ const FormSelect = ({ label, icon: Icon, options, value, onChange, i18nLabel, is
     <label className="text-xs font-black uppercase tracking-widest text-aiko-navy/30 mx-2" data-i18n={i18nLabel}>
       {label}
     </label>
-    <div className="flex items-center gap-3 bg-aiko-gray-100 p-4 rounded-2xl border border-transparent focus-within:border-aiko-teal focus-within:bg-white transition-all">
+    <div className="flex items-center gap-3 bg-aiko-gray-100 p-2 rounded-2xl border border-transparent focus-within:border-aiko-teal focus-within:bg-white transition-all">
       <Icon size={18} className="text-aiko-navy/30" />
       <select 
         value={value}
@@ -544,7 +544,7 @@ const FormSelect = ({ label, icon: Icon, options, value, onChange, i18nLabel, is
 
 const Logo = ({ size = "md", invert = false }: { size?: "sm" | "md" | "lg" | "xl", invert?: boolean }) => {
   return (
-    <div className={`flex items-center gap-4 group cursor-pointer ${invert ? 'flex-col sm:flex-row' : ''}`}>
+    <div className={`flex items-center gap-2 group cursor-pointer ${invert ? 'flex-col sm:flex-row' : ''}`}>
       <img src="/logo.png" alt="Aiko" style={{width: '40px', height: '40px', objectFit: 'contain'}} />
       {(size === 'lg' || size === 'xl') && (
         <div className="flex flex-col -space-y-2">
@@ -592,11 +592,11 @@ const JobCard = ({ title, company, location, price, time, type, icon: Icon, onAp
       initial={{ opacity: 0, y: 20 }}
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true }}
-      className="bento-card p-6 space-y-4 cursor-pointer group hover:shadow-xl transition-all"
+      className="bento-card p-2 space-y-2 cursor-pointer group hover:shadow-xl transition-all"
       onClick={onApply}
     >
-      <div className="flex items-start justify-between gap-4">
-        <div className="flex items-center gap-4">
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex items-center gap-2">
           <div
             onClick={(e) => { e.stopPropagation(); onViewProfile?.(); }}
             className="w-14 h-14 bg-aiko-teal-bg text-aiko-teal rounded-2xl flex items-center justify-center shadow-sm group-hover:scale-105 transition-transform duration-500 cursor-pointer"
@@ -656,76 +656,66 @@ const WorkerCard = ({ name, skill, rating, price, distance, icon: Icon, onOffer,
   
   return (
     <motion.div 
-      initial={{ opacity: 0, y: 20 }}
+      initial={{ opacity: 0, y: 10 }}
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true }}
-      className="bento-card p-6 space-y-5 group hover:shadow-xl transition-all relative overflow-hidden"
+      className="bento-card p-3 space-y-3 group hover:shadow-lg transition-all relative overflow-hidden"
     >
-      <div className="flex items-start gap-4">
-        <div className="flex-1 min-w-0 pr-4">
+      <div className="flex items-start gap-2">
+        <div className="flex-1 min-w-0 pr-2">
           <h4
             onClick={() => onViewProfile?.()}
-            className="text-xl font-black text-aiko-navy truncate leading-tight hover:text-aiko-teal transition-colors cursor-pointer"
+            className="text-sm font-black text-aiko-navy truncate leading-tight hover:text-aiko-teal transition-colors cursor-pointer"
           >
             {name}
           </h4>
-          <p className="text-sm font-bold text-aiko-navy/30 truncate mt-0.5">{skill}</p>
-          <div className="flex items-center gap-1.5 mt-2">
+          <p className="text-[10px] font-bold text-aiko-navy/30 truncate mt-0.5">{skill}</p>
+          <div className="flex items-center gap-1 mt-1">
             <div className="flex items-center gap-0.5">
-              {[1,2,3,4,5].map(i => <Star key={i} size={12} fill={i <= Math.floor(rating) ? "#F5A623" : "none"} className={i <= Math.floor(rating) ? "text-aiko-orange" : "text-aiko-navy/10"} />)}
+              {[1,2,3,4,5].map(i => <Star key={i} size={10} fill={i <= Math.floor(rating) ? "#F5A623" : "none"} className={i <= Math.floor(rating) ? "text-aiko-orange" : "text-aiko-navy/10"} />)}
             </div>
-            <span className="text-[10px] font-black text-aiko-navy/30 mt-0.5">{rating} (127 {isRTL ? "تقييم" : "reviews"})</span>
+            <span className="text-[8px] font-black text-aiko-navy/30">{rating}</span>
           </div>
         </div>
         <div className="relative flex-shrink-0">
           <div
             onClick={() => onViewProfile?.()}
-            className="w-20 h-20 bg-linear-to-br from-aiko-teal-bg to-white text-aiko-teal rounded-[2rem] flex items-center justify-center overflow-hidden border-2 border-white shadow-lg group-hover:scale-105 transition-transform duration-500 cursor-pointer"
+            className="w-[50px] h-[50px] bg-linear-to-br from-aiko-teal-bg to-white text-aiko-teal rounded-[1rem] flex items-center justify-center overflow-hidden border-2 border-white shadow-md group-hover:scale-105 transition-transform duration-500 cursor-pointer"
           >
-            <Icon size={40} strokeWidth={1} />
+            <Icon size={24} strokeWidth={1} />
           </div>
-          <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-aiko-teal rounded-full border-4 border-white shadow-sm flex items-center justify-center">
-            <Zap size={10} className="text-white fill-white" />
+          <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-aiko-teal rounded-full border-2 border-white shadow-sm flex items-center justify-center">
+            <Zap size={8} className="text-white fill-white" />
           </div>
         </div>
       </div>
 
-      <div className="bg-aiko-teal-bg/30 p-3.5 rounded-2xl flex items-center justify-center gap-3 text-aiko-teal-dark font-black text-[10px] uppercase tracking-widest border border-aiko-teal/5">
-        <Sun size={14} fill="currentColor" className="text-aiko-orange" />
-        <span>{isRTL ? "دوام جزئي — متاح صباحاً من 7:00 إلى 1:00 ظهراً فقـط" : "Part-time — available from 7:00 to 1:00 only"}</span>
-      </div>
-
-      <div className="flex flex-wrap gap-2">
-         <div className="bg-[#EFFAF5] text-[#22C55E] px-4 py-1.5 rounded-xl font-black text-[10px] uppercase tracking-widest flex items-center gap-2">
-            <Zap size={12} fill="currentColor" />
-            {isRTL ? "متاح الآن" : "Available Now"}
+      <div className="flex flex-wrap gap-1">
+         <div className="bg-[#EFFAF5] text-[#22C55E] px-2 py-1 rounded-lg font-black text-[8px] uppercase tracking-tight flex items-center gap-1">
+            <Zap size={10} fill="currentColor" />
+            {isRTL ? "متاح" : "Avail"}
          </div>
-         <div className="bg-aiko-gray-100 text-aiko-navy/40 px-4 py-1.5 rounded-xl font-black text-[10px] uppercase tracking-widest flex items-center gap-2">
-            <MapPin size={12} />
+         <div className="bg-aiko-gray-100 text-aiko-navy/40 px-2 py-1 rounded-lg font-black text-[8px] uppercase tracking-tight flex items-center gap-1">
+            <MapPin size={10} />
             {distance}
-         </div>
-         <div className="bg-[#FFF9EA] text-[#D4891A] px-4 py-1.5 rounded-xl font-black text-[10px] uppercase tracking-widest flex items-center gap-2">
-            <Sun size={12} fill="currentColor" />
-            {isRTL ? "دوام جزئي" : "Part-time"}
          </div>
       </div>
       
-      <div className="flex items-center justify-between pt-4 border-t border-aiko-gray-100 gap-3">
+      <div className="flex items-center justify-between pt-2 border-t border-aiko-gray-100 gap-2">
         <button 
           onClick={(e) => { e.stopPropagation(); onOffer(); }}
-          className="flex-1 bg-aiko-orange text-white text-[10px] font-black uppercase tracking-[0.2em] py-4 rounded-2xl hover:bg-aiko-orange-dark transition-all active:scale-95 shadow-lg shadow-aiko-orange/20"
+          className="flex-1 bg-aiko-orange text-white text-[8px] font-black uppercase tracking-widest py-2 rounded-xl hover:bg-aiko-orange-dark transition-all active:scale-95"
         >
-          {isRTL ? "إرسال عرض" : "Send Offer"}
+          {isRTL ? "عرض" : "Offer"}
         </button>
         <button 
           onClick={(e) => { e.stopPropagation(); onContact(); }}
-          className="w-14 h-14 bg-aiko-gray-100 text-aiko-navy/20 flex items-center justify-center rounded-2xl hover:bg-aiko-teal-bg hover:text-aiko-teal transition-all active:scale-95"
+          className="w-8 h-8 bg-aiko-gray-100 text-aiko-navy/20 flex items-center justify-center rounded-xl hover:bg-aiko-teal-bg hover:text-aiko-teal transition-all active:scale-95"
         >
-          <UserIcon size={24} />
+          <UserIcon size={16} />
         </button>
         <div className="text-right">
-           <p className="text-[10px] font-black text-aiko-navy/30 uppercase tracking-widest leading-none mb-1">{isRTL ? "ساعة /" : "/ Hour"}</p>
-           <p className="text-lg font-black text-aiko-navy leading-none">{price}</p>
+           <p className="text-[14px] font-black text-aiko-navy leading-none">{price}</p>
         </div>
       </div>
     </motion.div>
@@ -1719,7 +1709,7 @@ export default function App() {
   const ContactModal = () => {
     if (!showContactModal || !contactTarget) return null;
     return (
-      <div className="fixed inset-0 z-[200] flex items-center justify-center p-6">
+      <div className="fixed inset-0 z-[200] flex items-center justify-center p-2">
         <motion.div 
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -1731,9 +1721,9 @@ export default function App() {
           initial={{ scale: 0.9, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           exit={{ scale: 0.9, opacity: 0 }}
-          className="relative w-full max-w-sm bg-white rounded-[40px] p-8 shadow-2xl space-y-6"
+          className="relative w-full max-w-sm bg-white rounded-[24px] p-4 shadow-2xl space-y-3"
         >
-          <div className="flex flex-col items-center text-center space-y-2 mb-4">
+          <div className="flex flex-col items-center text-center space-y-2 mb-2">
              <div className="w-20 h-20 bg-aiko-teal-bg text-aiko-teal rounded-3xl flex items-center justify-center mb-2">
                 {contactTarget.icon ? <contactTarget.icon size={40} /> : <UserIcon size={40} />}
              </div>
@@ -1741,9 +1731,9 @@ export default function App() {
              <p className="text-sm font-bold text-aiko-navy/40">{isRTL ? (contactTarget.company ? "صاحب عمل" : "عامل") : (contactTarget.company ? "Employer" : "Worker")}</p>
           </div>
 
-          <div className="space-y-4">
+          <div className="space-y-2">
             <button className="w-full flex items-center justify-between p-5 rounded-3xl bg-aiko-gray-50 border border-transparent hover:border-aiko-teal/20 transition-all group">
-              <div className="flex items-center gap-4 text-right">
+              <div className="flex items-center gap-2 text-right">
                 <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center text-aiko-teal shadow-sm group-hover:scale-110 transition-transform">
                   <Phone size={22} fill="currentColor" className="opacity-20" />
                   <Phone size={22} className="absolute" />
@@ -1757,7 +1747,7 @@ export default function App() {
             </button>
 
             <button className="w-full flex items-center justify-between p-5 rounded-3xl bg-aiko-gray-50 border border-transparent hover:border-aiko-teal/20 transition-all group">
-              <div className="flex items-center gap-4 text-right">
+              <div className="flex items-center gap-2 text-right">
                 <div className="w-12 h-12 bg-[#F3F7FF] rounded-2xl flex items-center justify-center text-[#3B82F6] shadow-sm group-hover:scale-110 transition-transform">
                   <Mail size={22} fill="currentColor" className="opacity-20" />
                   <Mail size={22} className="absolute" />
@@ -1771,7 +1761,7 @@ export default function App() {
             </button>
 
             <button className="w-full flex items-center justify-between p-5 rounded-3xl bg-aiko-gray-50 border border-transparent hover:border-aiko-teal/20 transition-all group">
-              <div className="flex items-center gap-4 text-right">
+              <div className="flex items-center gap-2 text-right">
                 <div className="w-12 h-12 bg-green-50 rounded-2xl flex items-center justify-center text-green-500 shadow-sm group-hover:scale-110 transition-transform">
                   <LayoutGrid size={22} fill="currentColor" className="opacity-20" />
                   <LayoutGrid size={22} className="absolute" />
@@ -1787,7 +1777,7 @@ export default function App() {
 
           <button 
             onClick={() => setShowContactModal(false)}
-            className="w-full py-5 rounded-[2rem] bg-aiko-navy/5 text-aiko-navy font-black text-sm uppercase tracking-widest hover:bg-aiko-navy/10 transition-all"
+            className="w-full py-3 rounded-[2rem] bg-aiko-navy/5 text-aiko-navy font-black text-sm uppercase tracking-widest hover:bg-aiko-navy/10 transition-all"
           >
             {isRTL ? "إغلاق" : "Close"}
           </button>
@@ -1799,7 +1789,7 @@ export default function App() {
   const LocationModal = () => {
     if (!showLocationModal) return null;
     return (
-      <div className="fixed inset-0 z-[200] flex items-center justify-center p-6">
+      <div className="fixed inset-0 z-[200] flex items-center justify-center p-2">
         <motion.div 
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -1811,9 +1801,9 @@ export default function App() {
           initial={{ scale: 0.9, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           exit={{ scale: 0.9, opacity: 0 }}
-          className="relative w-full max-w-sm bg-white rounded-[40px] p-8 shadow-2xl space-y-6"
+          className="relative w-full max-w-sm bg-white rounded-[24px] p-4 shadow-2xl space-y-3"
         >
-          <div className="flex flex-col items-center text-center space-y-2 mb-4">
+          <div className="flex flex-col items-center text-center space-y-2 mb-2">
              <div className="w-16 h-16 bg-aiko-teal-bg text-aiko-teal rounded-2xl flex items-center justify-center mb-2">
                 <MapPin size={32} />
              </div>
@@ -1821,7 +1811,7 @@ export default function App() {
              <p className="text-sm font-bold text-aiko-navy/30">{isRTL ? "اختر الولاية والبلدية" : "Select wilaya and commune"}</p>
           </div>
 
-          <div className="space-y-4">
+          <div className="space-y-2">
             <FormSelect 
               label={t.wilaya_label} 
               icon={MapPin} 
@@ -1847,7 +1837,7 @@ export default function App() {
               handleUpdateProfile({ location: `${wilaya}, ${commune}` });
               setShowLocationModal(false);
             }}
-            className="w-full py-5 rounded-[2rem] bg-aiko-teal text-white font-black text-sm uppercase tracking-widest hover:bg-aiko-teal-dark transition-all shadow-lg shadow-aiko-teal/20"
+            className="w-full py-3 rounded-[2rem] bg-aiko-teal text-white font-black text-sm uppercase tracking-widest hover:bg-aiko-teal-dark transition-all shadow-lg shadow-aiko-teal/20"
           >
             {isRTL ? "حفظ التغييرات" : "Save Changes"}
           </button>
@@ -1870,7 +1860,7 @@ export default function App() {
         <motion.div
           animate={{ opacity: [0.3, 1, 0.3] }}
           transition={{ duration: 2, repeat: Infinity }}
-          className="flex gap-2 mt-12"
+          className="flex gap-2 mt-6"
         >
           {[0, 1, 2].map(i => <div key={i} className="w-3 h-3 bg-aiko-teal rounded-full" />)}
         </motion.div>
@@ -1885,7 +1875,7 @@ export default function App() {
           initial={{ scale: 0.8, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           transition={{ duration: 1, ease: "easeOut" }}
-          className="bg-white rounded-[32px] flex items-center justify-center shadow-2xl relative"
+          className="bg-white rounded-[16px] flex items-center justify-center shadow-2xl relative"
         >
           <Logo size="md" />
         </motion.div>
@@ -1893,7 +1883,7 @@ export default function App() {
           initial={{ y: 20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ delay: 0.5 }}
-          className="text-4xl font-black text-white mt-8 tracking-tight"
+          className="text-4xl font-black text-white mt-4 tracking-tight"
           data-i18n="Aiko"
         >
           Aiko
@@ -1910,7 +1900,7 @@ export default function App() {
   }
 
   return (
-    <div className={`min-h-screen flex flex-col bg-aiko-gray-100 text-aiko-navy font-sans tracking-tight`} dir={isRTL ? 'rtl' : 'ltr'}>
+    <div className={`h-screen flex flex-col bg-aiko-gray-100 text-aiko-navy font-sans tracking-tight overflow-hidden`} dir={isRTL ? 'rtl' : 'ltr'}>
       <AnimatePresence mode="wait">
         
         {/* --- Language Screen --- */}
@@ -1920,16 +1910,16 @@ export default function App() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0, x: isRTL ? 100 : -100 }}
-            className="flex-1 flex flex-col items-center justify-center p-8 bg-linear-to-br from-[#0A7878] via-[#0FA3A3] to-[#4DC8C8]"
+            className="flex-1 flex flex-col items-center justify-center p-4 bg-linear-to-br from-[#0A7878] via-[#0FA3A3] to-[#4DC8C8]"
           >
             <Logo size="lg" invert />
-            <h2 className="text-xl font-bold text-white mt-12 mb-8" data-i18n="choose_lang">{t.choose_lang}</h2>
-            <div className="w-full max-w-sm space-y-4">
+            <h2 className="text-xl font-bold text-white mt-6 mb-8" data-i18n="choose_lang">{t.choose_lang}</h2>
+            <div className="w-full max-w-sm space-y-2">
               {(['ar', 'en', 'fr'] as Language[]).map(l => (
                 <button 
                   key={l}
                   onClick={() => selectLang(l)}
-                  className="w-full flex items-center justify-between p-6 rounded-2xl bg-white/10 backdrop-blur-md border-2 border-white/20 hover:bg-white/20 transition-all text-white font-bold"
+                  className="w-full flex items-center justify-between p-2 rounded-2xl bg-white/10 backdrop-blur-md border-2 border-white/20 hover:bg-white/20 transition-all text-white font-bold"
                 >
                   <span>{l === 'ar' ? 'العربية' : l === 'en' ? 'English' : 'Français'}</span>
                   <span className="text-2xl">{l === 'ar' ? '🇩🇿' : l === 'en' ? '🇬🇧' : '🇫🇷'}</span>
@@ -1946,20 +1936,20 @@ export default function App() {
             initial={{ opacity: 0, x: isRTL ? -100 : 100 }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: isRTL ? 100 : -100 }}
-            className="flex-1 flex flex-col justify-between p-8 bg-white"
+            className="flex-1 flex flex-col justify-between p-4 bg-white"
           >
             <div className="flex-1 flex flex-col items-center justify-center text-center space-y-12">
               <div className="w-64 h-64 bg-aiko-teal-bg rounded-full flex items-center justify-center text-[100px] shadow-inner">
                 <Zap size={80} className="text-aiko-teal animate-pulse" />
               </div>
-              <div className="space-y-4 max-w-md">
+              <div className="space-y-2 max-w-md">
                 <h2 className="text-3xl font-black" data-i18n="ob0_title">{t.ob0_title}</h2>
                 <p className="text-aiko-navy/40 font-medium leading-relaxed" data-i18n="ob0_desc">
                   {t.ob0_desc}
                 </p>
               </div>
             </div>
-            <div className="space-y-4">
+            <div className="space-y-2">
               <button onClick={() => setCurrentView('auth')} className="btn-primary w-full" data-i18n="start_btn">
                 {t.start_btn}
               </button>
@@ -1974,10 +1964,10 @@ export default function App() {
             initial={{ opacity: 0, x: isRTL ? -100 : 100 }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: isRTL ? 100 : -100 }}
-            className="flex-1 flex flex-col p-6 max-w-md mx-auto w-full overflow-y-auto no-scrollbar scroll-smooth"
+            className="flex-1 flex flex-col p-2 max-w-md mx-auto w-full overflow-y-auto no-scrollbar scroll-smooth"
           >
             {/* Header with back button */}
-            <div className="flex items-center gap-4 mb-4">
+            <div className="flex items-center gap-2 mb-2">
               <button 
                 onClick={() => setCurrentView('onboard')}
                 className="w-10 h-10 rounded-2xl bg-white flex items-center justify-center text-aiko-navy/40 hover:bg-aiko-teal-bg hover:text-aiko-teal transition-all shadow-sm"
@@ -1986,7 +1976,7 @@ export default function App() {
               </button>
             </div>
 
-            <div className={`flex-1 flex flex-col items-center justify-center space-y-8 bg-white rounded-[40px] p-8 shadow-sm border border-aiko-gray-100 ${authMode === 'signup' ? 'my-4' : ''}`}>
+            <div className={`flex-1 flex flex-col items-center justify-center space-y-2 bg-white rounded-[24px] p-4 shadow-sm border border-aiko-gray-100 ${authMode === 'signup' ? 'my-4' : ''}`}>
               {authMode === 'login' && (
                 <Logo size="sm" />
               )}
@@ -2007,7 +1997,7 @@ export default function App() {
                 </p>
               </div>
 
-              <div className="w-full space-y-4">
+              <div className="w-full space-y-2">
                 {authMode === 'signup' && (
                   <FormInput 
                     label={t.fullname_label} 
@@ -2063,7 +2053,7 @@ export default function App() {
                       isRTL={isRTL}
                     />
                     
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-2 gap-2">
                       <FormSelect 
                         label={t.wilaya_label} 
                         icon={MapPin} 
@@ -2094,7 +2084,7 @@ export default function App() {
                     handleResetPassword
                   }
                   disabled={isAuthLoading}
-                  className="btn-primary w-full py-5 rounded-2xl shadow-xl shadow-aiko-teal/20 mt-4 flex items-center justify-center gap-3"
+                  className="btn-primary w-full py-3 rounded-2xl shadow-xl shadow-aiko-teal/20 mt-4 flex items-center justify-center gap-3"
                 >
                   {isAuthLoading && (
                     <motion.div
@@ -2128,12 +2118,12 @@ export default function App() {
                       <div className="flex-grow border-t border-aiko-navy/5"></div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4">
-                      <button className="flex items-center justify-center gap-2 p-4 bg-white border border-aiko-gray-100 rounded-2xl font-bold text-aiko-navy hover:bg-aiko-gray-100 transition-colors group">
+                    <div className="grid grid-cols-2 gap-2">
+                      <button className="flex items-center justify-center gap-2 p-2 bg-white border border-aiko-gray-100 rounded-2xl font-bold text-aiko-navy hover:bg-aiko-gray-100 transition-colors group">
                         <img src="https://upload.wikimedia.org/wikipedia/commons/f/fa/Apple_logo_black.svg" className="w-4 h-4 opacity-70 group-hover:opacity-100" alt="Apple" />
                         <span>Apple</span>
                       </button>
-                      <button className="flex items-center justify-center gap-2 p-4 bg-white border border-aiko-gray-100 rounded-2xl font-bold text-aiko-navy hover:bg-aiko-gray-100 transition-colors group">
+                      <button className="flex items-center justify-center gap-2 p-2 bg-white border border-aiko-gray-100 rounded-2xl font-bold text-aiko-navy hover:bg-aiko-gray-100 transition-colors group">
                         <img src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg" className="w-4 h-4 opacity-70 group-hover:opacity-100" alt="Google" />
                         <span>Google</span>
                       </button>
@@ -2172,9 +2162,9 @@ export default function App() {
             initial={{ opacity: 0, x: isRTL ? -100 : 100 }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, scale: 0.95 }}
-            className="flex-1 flex flex-col p-8 bg-aiko-gray-100"
+            className="flex-1 flex flex-col p-4 bg-aiko-gray-100"
           >
-            <div className="flex items-center gap-4 mb-4">
+            <div className="flex items-center gap-2 mb-2">
               <button
                 onClick={() => setCurrentView('auth')}
                 className="w-10 h-10 rounded-2xl bg-white flex items-center justify-center text-aiko-navy/40 hover:bg-aiko-teal-bg hover:text-aiko-teal transition-all shadow-sm"
@@ -2190,7 +2180,7 @@ export default function App() {
               </h2>
             </div>
             
-            <div className="grid gap-6 flex-1">
+            <div className="grid gap-2 flex-1">
               <RoleChoice 
                 icon={Search} 
                 title={t.role_employer} 
@@ -2256,12 +2246,12 @@ export default function App() {
             key="dashboard"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="flex-1 flex flex-col"
+            className="h-screen flex flex-col overflow-hidden"
           >
             {/* Header */}
-            <div className="bg-white border-b border-aiko-gray-100 p-6 sticky top-0 z-50">
-              <div className="flex items-center justify-between mb-6">
-                <div className="flex items-center gap-3">
+            <div className="flex-none bg-white border-b border-aiko-gray-100 p-2 z-50">
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2">
                   <button 
                     onClick={() => setActiveTab('profile')}
                     className="w-10 h-10 rounded-2xl bg-aiko-gray-100 flex items-center justify-center text-aiko-navy/20 hover:bg-aiko-teal-bg hover:text-aiko-teal transition-all overflow-hidden"
@@ -2291,7 +2281,7 @@ export default function App() {
 
                 </div>
                 
-                <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2">
                   <div className="text-right">
                     <h3 className="text-lg font-black text-aiko-navy leading-none">Aiko</h3>
                   </div>
@@ -2299,12 +2289,12 @@ export default function App() {
                 </div>
               </div>
 
-              <div className="flex flex-col space-y-4">
+              <div className="flex flex-col space-y-2">
                 <div 
                   onClick={() => setShowLocationModal(true)}
-                  className="flex items-center justify-between text-xs font-bold text-aiko-navy/40 bg-aiko-gray-50 p-4 rounded-2xl cursor-pointer hover:bg-aiko-teal-bg/30 transition-colors group"
+                  className="flex items-center justify-between text-[10px] font-bold text-aiko-navy/40 bg-aiko-gray-50 p-2 rounded-xl cursor-pointer hover:bg-aiko-teal-bg/30 transition-colors group"
                 >
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2">
                     <div className="w-8 h-8 bg-white rounded-xl shadow-sm flex items-center justify-center text-aiko-teal">
                       <MapPin size={16} />
                     </div>
@@ -2319,17 +2309,17 @@ export default function App() {
               </div>
             </div>
 
-            <main className="flex-1 p-6 space-y-8 pb-32 overflow-y-auto">
+            <main className="flex-1 overflow-hidden">
               {activeTab === 'feed' && (
                 <motion.div 
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="space-y-8"
+                  className="h-full overflow-y-auto p-2 space-y-2 no-scrollbar"
                 >
                   {/* Specialized Content for Worker */}
                   {userRole === 'worker' ? (
                     <>
-                      <div className="bg-linear-to-br from-[#0A7878] to-[#0FA3A3] p-8 rounded-[32px] text-white space-y-6 relative overflow-hidden shadow-2xl">
+                      <div className="bg-linear-to-br from-[#0A7878] to-[#0FA3A3] p-4 rounded-[16px] text-white space-y-3 relative overflow-hidden shadow-2xl">
                         <div className="absolute -top-12 -right-12 w-48 h-48 bg-white/10 rounded-full blur-3xl" />
                         <div className="relative z-10">
                           <div className="flex items-center justify-between">
@@ -2347,7 +2337,7 @@ export default function App() {
                               />
                             </div>
                           </div>
-                          <div className="flex gap-3 mt-8 overflow-x-auto no-scrollbar pb-2">
+                          <div className="flex gap-3 mt-4 overflow-x-auto no-scrollbar pb-2">
                             <button
                               onClick={() => setShowWorkerAvailabilityForm(true)}
                               className="bg-white text-aiko-teal px-6 py-3 rounded-2xl text-xs font-black whitespace-nowrap hover:bg-aiko-teal-bg transition-all flex items-center gap-2 shadow-lg"
@@ -2374,13 +2364,13 @@ export default function App() {
                         </div>
                       </div>
 
-                      <div className="relative mb-6">
+                      <div className="relative mb-2">
                         <input
                           type="text"
                           placeholder={isRTL ? "ابحث بذكاء عن وظائف..." : "Smart search for jobs..."}
                           value={searchQuery}
                           onChange={(e) => setSearchQuery(e.target.value)}
-                          className="w-full bg-white border-2 border-aiko-gray-100 rounded-[2rem] py-5 px-8 pr-14 text-sm font-bold text-aiko-navy focus:outline-none focus:border-aiko-teal transition-all shadow-sm"
+                          className="w-full bg-white border-2 border-aiko-gray-100 rounded-[2rem] py-3 px-8 pr-14 text-sm font-bold text-aiko-navy focus:outline-none focus:border-aiko-teal transition-all shadow-sm"
                         />
                         <div className={`absolute top-1/2 -translate-y-1/2 ${isRTL ? "left-6" : "right-6"} text-aiko-teal`}>
                           <Search size={22} strokeWidth={3} />
@@ -2388,7 +2378,7 @@ export default function App() {
                       </div>
 
                       <SectionTitle title={t.jobs_nearby_title} action={t.choose_lang === "Choose Your Language" ? "All" : "الكل"} onClick={() => setCategory('all')} />
-                      <div className="grid gap-4">
+                      <div className="grid gap-2">
                         {filteredJobs.map(job => (
                           <JobCard 
                             key={job.id}
@@ -2409,8 +2399,8 @@ export default function App() {
                           />
                         ))}
                         {filteredJobs.length === 0 && (
-                          <div className="p-12 text-center text-aiko-navy/30 font-bold border-2 border-dashed border-aiko-gray-100 rounded-[32px]">
-                            <Search className="mx-auto mb-4 opacity-20" size={48} />
+                          <div className="p-12 text-center text-aiko-navy/30 font-bold border-2 border-dashed border-aiko-gray-100 rounded-[16px]">
+                            <Search className="mx-auto mb-2 opacity-20" size={48} />
                             {isRTL ? "لا توجد وظائف متاحة في هذا التصنيف" : "No jobs found in this category"}
                           </div>
                         )}
@@ -2418,11 +2408,11 @@ export default function App() {
                     </>
                   ) : (
                     <>
-                      <div className="bg-[#D4891A] p-8 rounded-[40px] text-white space-y-6 relative overflow-hidden shadow-2xl">
+                      <div className="bg-[#D4891A] p-4 rounded-[24px] text-white space-y-3 relative overflow-hidden shadow-2xl">
                         <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16 blur-2xl" />
                         <div className="absolute bottom-0 left-0 w-24 h-24 bg-black/10 rounded-full -ml-12 -mb-12 blur-xl" />
                         
-                        <div className="relative z-10 text-center space-y-4">
+                        <div className="relative z-10 text-center space-y-2">
                           <h3 className="text-3xl font-black">{isRTL ? "ابحث عن العامل المناسب" : "Search for the right worker"}</h3>
                           <p className="text-white/80 font-bold text-sm">{isRTL ? "انشر وظيفة أو أرسل عرضاً مؤقتاً مباشرة" : "Post a job or send an instant offer directly"}</p>
                           
@@ -2433,7 +2423,7 @@ export default function App() {
                                 setIsEditingService(false);
                                 setShowPostJobModal(true);
                               }}
-                              className="flex-1 bg-white/20 backdrop-blur-md border border-white/30 text-white font-black uppercase tracking-widest text-[10px] py-4 rounded-2xl flex items-center justify-center gap-2 hover:bg-white/30 transition-all"
+                              className="flex-1 bg-white/20 backdrop-blur-md border border-white/30 text-white font-black uppercase tracking-widest text-[10px] py-2 rounded-2xl flex items-center justify-center gap-2 hover:bg-white/30 transition-all"
                             >
                                <Zap size={14} fill="currentColor" />
                                {isRTL ? "طلب فوري" : "Instant Request"}
@@ -2444,7 +2434,7 @@ export default function App() {
                                 setIsEditingService(false);
                                 setShowPostJobModal(true);
                               }}
-                              className="flex-1 bg-white text-[#D4891A] font-black uppercase tracking-widest text-[10px] py-4 rounded-2xl flex items-center justify-center gap-2 shadow-xl hover:scale-105 transition-all"
+                              className="flex-1 bg-white text-[#D4891A] font-black uppercase tracking-widest text-[10px] py-2 rounded-2xl flex items-center justify-center gap-2 shadow-xl hover:scale-105 transition-all"
                             >
                                <Bell size={14} fill="currentColor" />
                                {isRTL ? "نشر وظيفة" : "Post Job"}
@@ -2454,14 +2444,14 @@ export default function App() {
                       </div>
 
 
-                      <div className="space-y-4">
-                        <div className="relative mb-6">
+                      <div className="space-y-2">
+                        <div className="relative mb-2">
                           <input 
                             type="text"
                             placeholder={isRTL ? "ابحث بذكاء عن عمال..." : "Smart search for workers..."}
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            className="w-full bg-white border-2 border-aiko-gray-100 rounded-[2rem] py-5 px-8 pr-14 text-sm font-bold text-aiko-navy focus:outline-none focus:border-aiko-teal transition-all shadow-sm"
+                            className="w-full bg-white border-2 border-aiko-gray-100 rounded-[2rem] py-3 px-8 pr-14 text-sm font-bold text-aiko-navy focus:outline-none focus:border-aiko-teal transition-all shadow-sm"
                           />
                           <div className={`absolute top-1/2 -translate-y-1/2 ${isRTL ? "left-6" : "right-6"} text-aiko-teal`}>
                             <Search size={22} strokeWidth={3} />
@@ -2484,69 +2474,57 @@ export default function App() {
                         </div>
                       </div>
 
-                      <div className="grid gap-4">
+                      <div className="grid grid-cols-2 gap-2">
                         {filteredWorkers.map(avail => (
                           <motion.div
                             key={avail.id}
-                            initial={{ opacity: 0, y: 20 }}
+                            initial={{ opacity: 0, y: 10 }}
                             animate={{ opacity: 1, y: 0 }}
-                            className="bento-card p-6 space-y-4 group hover:shadow-xl transition-all"
+                            className="bento-card p-2 space-y-2 group hover:shadow-md transition-all relative overflow-hidden"
                           >
-                            <div className="flex items-start justify-between">
-                              <div className="flex items-center gap-4">
-                                <div
-                                  onClick={() => handleViewProfile(avail.worker.id)}
-                                  className="w-14 h-14 bg-aiko-teal-bg text-aiko-teal rounded-2xl flex items-center justify-center cursor-pointer hover:scale-105 transition-transform overflow-hidden"
-                                >
-                                  <img
-                                    src={avail.worker.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${avail.worker.name}`}
-                                    className="w-full h-full object-cover"
-                                    alt=""
-                                  />
-                                </div>
+                            <div className="flex items-start justify-between gap-1">
+                              <div className="flex-1 min-w-0">
                                 <div onClick={() => handleViewProfile(avail.worker.id)} className="cursor-pointer">
-                                  <h4 className="font-extrabold text-aiko-navy hover:text-aiko-teal transition-colors">{avail.worker.name}</h4>
-                                  <div className="flex items-center gap-1">
-                                    <Star size={12} fill="#F5A623" className="text-aiko-orange" />
-                                    <span className="text-[10px] font-black text-aiko-navy/30">{avail.worker.rating || "5.0"}</span>
+                                  <h4 className="text-[12px] font-black text-aiko-navy hover:text-aiko-teal transition-colors truncate">{avail.worker.name}</h4>
+                                  <div className="flex items-center gap-0.5">
+                                    <Star size={8} fill="#F5A623" className="text-aiko-orange" />
+                                    <span className="text-[8px] font-black text-aiko-navy/30">{avail.worker.rating || "5.0"}</span>
                                   </div>
                                 </div>
                               </div>
-                              <div className="text-right">
-                                <p className="text-lg font-black text-aiko-teal">{avail.hourlyRate} DA/h</p>
-                                {avail.dailyRate && <p className="text-[10px] font-bold text-aiko-navy/30">{avail.dailyRate} DA/day</p>}
+                              <div
+                                onClick={() => handleViewProfile(avail.worker.id)}
+                                className="w-10 h-10 bg-aiko-teal-bg text-aiko-teal rounded-lg flex items-center justify-center cursor-pointer overflow-hidden flex-shrink-0"
+                              >
+                                <img
+                                  src={avail.worker.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${avail.worker.name}`}
+                                  className="w-full h-full object-cover"
+                                  alt=""
+                                />
                               </div>
                             </div>
 
-                            <div className="space-y-2">
-                              <h5 className="font-black text-sm text-aiko-navy">{avail.title}</h5>
-                              <p className="text-xs font-medium text-aiko-navy/60 leading-relaxed line-clamp-2">
-                                {avail.description.substring(0, 100)}{avail.description.length > 100 ? '...' : ''}
+                            <div className="space-y-1">
+                              <h5 className="font-black text-[10px] text-aiko-navy truncate">{avail.title}</h5>
+                              <p className="text-[9px] font-medium text-aiko-navy/40 leading-tight line-clamp-2">
+                                {avail.description}
                               </p>
                             </div>
 
-                            <div className="flex flex-wrap gap-2">
-                              {avail.wilayas.map((w: string) => (
-                                <span key={w} className="px-3 py-1 rounded-full bg-aiko-teal-bg text-aiko-teal-dark font-black text-[8px] uppercase tracking-widest border border-aiko-teal/10">
-                                  {w}
-                                </span>
-                              ))}
-                            </div>
-
-                            <div className="flex items-center gap-3 pt-2 border-t border-aiko-gray-100">
-                              <button
+                            <div className="flex items-center justify-between pt-1 border-t border-aiko-gray-100">
+                               <span className="text-[10px] font-black text-aiko-teal">{avail.hourlyRate} DA</span>
+                               <button
                                 onClick={() => handleOpenChat(avail.worker)}
-                                className="flex-1 bg-aiko-teal text-white py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-aiko-teal-dark transition-all flex items-center justify-center gap-2"
+                                className="w-6 h-6 bg-aiko-teal text-white rounded-lg flex items-center justify-center hover:bg-aiko-teal-dark transition-all"
                               >
-                                <MessageCircle size={14} />
-                                {isRTL ? "تواصل معه" : "Contact Him"}
+                                <MessageCircle size={12} />
                               </button>
                             </div>
                           </motion.div>
                         ))}
                         {availableWorkers.length === 0 && (
-                          <div className="p-12 text-center text-aiko-navy/30 font-bold border-2 border-dashed border-aiko-gray-100 rounded-[32px]">
-                            <Search className="mx-auto mb-4 opacity-20" size={48} />
+                          <div className="p-12 text-center text-aiko-navy/30 font-bold border-2 border-dashed border-aiko-gray-100 rounded-[16px]">
+                            <Search className="mx-auto mb-2 opacity-20" size={48} />
                             {isRTL ? "لا يوجد عمال متاحون حالياً" : "No workers available currently"}
                           </div>
                         )}
@@ -2573,15 +2551,15 @@ export default function App() {
                 <motion.div 
                   initial={{ opacity: 0, x: 20 }}
                   animate={{ opacity: 1, x: 0 }}
-                  className="space-y-8"
+                  className="h-full overflow-y-auto p-2 space-y-2 no-scrollbar"
                 >
                   <SectionTitle title={userRole === 'worker' ? t.nav_requests : t.nav_myjobs} i18nTitleKey={userRole === 'worker' ? "nav_requests" : "nav_myjobs"} />
-                  <div className="space-y-4">
+                  <div className="space-y-2">
                     {userRole === 'worker' && incomingOffers.length > 0 && (
-                      <div className="space-y-4 mb-8">
+                      <div className="space-y-2 mb-8">
                         <SectionTitle title={isRTL ? "العروض الواردة" : "Incoming Offers"} />
                         {incomingOffers.map(offer => (
-                          <div key={offer.id} className="bento-card p-6 border-l-4 border-aiko-teal flex flex-col gap-4">
+                          <div key={offer.id} className="bento-card p-2 border-l-4 border-aiko-teal flex flex-col gap-2">
                             <div className="flex items-center justify-between">
                               <div className="flex items-center gap-3">
                                 <img src={offer.employer.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${offer.employer.name}`} className="w-10 h-10 rounded-full" />
@@ -2612,8 +2590,8 @@ export default function App() {
                     <SectionTitle title={userRole === 'worker' ? (isRTL ? "طلبات التقديم" : "Job Applications") : t.nav_myjobs} />
                     {myRequests.map((req) => (
                       <div key={req.id} className="flex flex-col gap-2">
-                        <div className={`bento-card p-6 border-l-4 ${req.status === 'completed' ? 'border-aiko-teal' : 'border-aiko-orange'} flex items-center justify-between`}>
-                        <div className="flex items-center gap-4">
+                        <div className={`bento-card p-2 border-l-4 ${req.status === 'completed' ? 'border-aiko-teal' : 'border-aiko-orange'} flex items-center justify-between`}>
+                        <div className="flex items-center gap-2">
                           <div className={`p-3 rounded-xl ${req.status === 'completed' ? 'bg-aiko-teal/10 text-aiko-teal' : 'bg-aiko-orange/10 text-aiko-orange'}`}>
                             {req.status === 'completed' ? <CheckCircle2 size={24} /> : <Clock size={24} />}
                           </div>
@@ -2683,13 +2661,13 @@ export default function App() {
                         </div>
                       </div>
                         {userRole === 'employer' && req.status === 'open' && (
-                          <div className="mx-6 mb-4 space-y-3">
+                          <div className="mx-6 mb-2 space-y-3">
                             <div className="flex items-center justify-between">
                               <h5 className="text-[10px] font-black uppercase tracking-widest text-aiko-navy/30">{isRTL ? "المتقدمون" : "Applicants"}</h5>
                               <button onClick={() => fetchApplicants(req.id)} className="text-[10px] font-black text-aiko-teal hover:underline">{isRTL ? "تحديث" : "Refresh"}</button>
                             </div>
                             {jobApplicants[req.id]?.map((app: any) => (
-                              <div key={app.id} className="bg-white p-4 rounded-2xl shadow-sm border border-aiko-gray-100 flex flex-col gap-3">
+                              <div key={app.id} className="bg-white p-2 rounded-2xl shadow-sm border border-aiko-gray-100 flex flex-col gap-3">
                                 <div className="flex items-center justify-between">
                                   <div className="flex items-center gap-3">
                                     <div className="w-8 h-8 rounded-full bg-aiko-gray-100 overflow-hidden">
@@ -2729,7 +2707,7 @@ export default function App() {
                     ))}
                     {myRequests.length === 0 && (
                        <div className="text-center py-10 text-aiko-navy/20">
-                        <Briefcase size={48} className="mx-auto mb-4 opacity-10" />
+                        <Briefcase size={48} className="mx-auto mb-2 opacity-10" />
                         <p className="font-bold">{isRTL ? "لا توجد طلبات حالياً" : "No requests yet"}</p>
                       </div>
                     )}
@@ -2741,17 +2719,17 @@ export default function App() {
                 <motion.div 
                   initial={{ opacity: 0, x: 20 }}
                   animate={{ opacity: 1, x: 0 }}
-                  className="space-y-6"
+                  className="h-full flex flex-col overflow-hidden"
                 >
                   {!activeChatUser ? (
-                    <>
+                    <div className="flex-1 overflow-y-auto p-2 space-y-2 no-scrollbar">
                       <SectionTitle title={t.nav_messages} i18nTitleKey="nav_messages" />
                       <div className="space-y-2">
                         {conversations.map((conv, i) => (
                           <div
                             key={i}
                             onClick={() => handleOpenChat(conv.otherUser)}
-                            className="flex items-center gap-4 p-4 hover:bg-white rounded-2xl cursor-pointer transition-colors group"
+                            className="flex items-center gap-2 p-2 hover:bg-white rounded-2xl cursor-pointer transition-colors group"
                           >
                             <div
                               onClick={(e) => { e.stopPropagation(); handleViewProfile(conv.otherUser.id); }}
@@ -2784,15 +2762,15 @@ export default function App() {
                         ))}
                         {conversations.length === 0 && (
                           <div className="text-center py-20 text-aiko-navy/20">
-                            <MessageCircle size={48} className="mx-auto mb-4 opacity-10" />
+                            <MessageCircle size={48} className="mx-auto mb-2 opacity-10" />
                             <p className="font-bold">{isRTL ? "لا توجد محادثات بعد" : "No conversations yet"}</p>
                           </div>
                         )}
                       </div>
-                    </>
+                    </div>
                   ) : (
-                    <div className="flex flex-col h-[70vh]">
-                      <div className="flex items-center gap-4 mb-6">
+                    <div className="flex-1 flex flex-col overflow-hidden p-2">
+                      <div className="flex-none flex items-center gap-2 mb-2">
                         <button
                           onClick={() => {
                             setActiveChatUser(null);
@@ -2816,7 +2794,7 @@ export default function App() {
                         </div>
                       </div>
 
-                      <div className="bg-aiko-teal/5 p-4 rounded-2xl mb-4">
+                      <div className="flex-none bg-aiko-teal/5 p-2 rounded-xl mb-2">
                          <p className="text-xs font-black text-aiko-teal mb-2">{isRTL ? "اترك تقييما لهذا الشخص" : "Leave a review for this user"}</p>
                          <div className="flex gap-2 mb-2">
                            {[1,2,3,4,5].map(s => (
@@ -2825,13 +2803,13 @@ export default function App() {
                          </div>
                       </div>
 
-                      <div className="flex-1 overflow-y-auto space-y-4 pr-2 no-scrollbar">
+                      <div className="flex-1 overflow-y-auto space-y-2 pr-2 no-scrollbar">
                         {chatMessages.map((msg, i) => (
                           <div
                             key={i}
                             className={`flex ${msg.senderId === currentUser.id ? "justify-end" : "justify-start"}`}
                           >
-                            <div className={`max-w-[80%] p-4 rounded-2xl text-sm font-bold shadow-sm ${
+                            <div className={`max-w-[80%] p-2 rounded-2xl text-sm font-bold shadow-sm ${
                               msg.senderId === currentUser.id
                                 ? "bg-aiko-teal text-white rounded-br-none"
                                 : "bg-white text-aiko-navy rounded-bl-none"
@@ -2845,20 +2823,20 @@ export default function App() {
                         ))}
                       </div>
 
-                      <div className="mt-4 flex gap-2">
+                      <div className="flex-none mt-2 flex gap-2">
                         <input
                           type="text"
                           value={newMessageText}
                           onChange={(e) => setNewMessageText(e.target.value)}
                           onKeyPress={(e) => e.key === "Enter" && handleSendMessage()}
                           placeholder={isRTL ? "اكتب رسالتك..." : "Type your message..."}
-                          className="flex-1 bg-white border-2 border-aiko-gray-100 rounded-2xl px-4 py-3 text-sm font-bold focus:outline-none focus:border-aiko-teal"
+                          className="flex-1 bg-white border-2 border-aiko-gray-100 rounded-xl px-4 py-2 text-sm font-bold focus:outline-none focus:border-aiko-teal"
                         />
                         <button
                           onClick={handleSendMessage}
-                          className="w-12 h-12 bg-aiko-teal text-white rounded-2xl flex items-center justify-center hover:bg-aiko-teal-dark transition-all"
+                          className="w-10 h-10 bg-aiko-teal text-white rounded-xl flex items-center justify-center hover:bg-aiko-teal-dark transition-all"
                         >
-                          <Send size={20} className={isRTL ? "rotate-180" : ""} />
+                          <Send size={18} className={isRTL ? "rotate-180" : ""} />
                         </button>
                       </div>
                     </div>
@@ -2870,11 +2848,11 @@ export default function App() {
                 <motion.div 
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="space-y-8"
+                  className="h-full overflow-y-auto p-2 space-y-2 no-scrollbar"
                 >
                   {isEditingProfile ? (
-                    <div className="space-y-6 pb-20">
-                      <div className="flex items-center gap-4 mb-4">
+                    <div className="space-y-3 pb-20">
+                      <div className="flex items-center gap-2 mb-2">
                         <button 
                           onClick={() => setIsEditingProfile(false)}
                           className="w-12 h-12 rounded-2xl bg-aiko-gray-100 flex items-center justify-center text-aiko-navy hover:bg-aiko-teal-bg hover:text-aiko-teal transition-all active:scale-95"
@@ -2884,7 +2862,7 @@ export default function App() {
                         <h2 className="text-2xl font-black text-aiko-navy">{isRTL ? 'تعديل الملف' : 'Edit Profile'}</h2>
                       </div>
 
-                      <div className="flex flex-col items-center gap-4 py-4">
+                      <div className="flex flex-col items-center gap-2 py-2">
                         <div className="relative group">
                           <div className="w-32 h-32 bg-aiko-teal-bg rounded-[3rem] overflow-hidden border-4 border-white shadow-xl flex items-center justify-center text-aiko-teal">
                             <img 
@@ -2918,7 +2896,7 @@ export default function App() {
                         <p className="text-[10px] font-black text-aiko-navy/30 uppercase tracking-widest">{isRTL ? 'تغيير الصورة' : 'Change Photo'}</p>
                       </div>
 
-                      <div className="space-y-4">
+                      <div className="space-y-2">
                         <FormInput 
                           label={isRTL ? "الاسم الكامل" : "Full Name"} 
                           icon={UserIcon} 
@@ -2942,12 +2920,12 @@ export default function App() {
                             {isRTL ? "الوصف الشخصي" : "Bio"}
                           </label>
                           <textarea 
-                            className="w-full bg-aiko-gray-50 rounded-[2rem] p-6 text-sm font-bold text-aiko-navy focus:outline-none focus:ring-4 focus:ring-aiko-teal/5 min-h-[140px] resize-none border-2 border-transparent focus:border-aiko-teal/20 transition-all"
+                            className="w-full bg-aiko-gray-50 rounded-[2rem] p-2 text-sm font-bold text-aiko-navy focus:outline-none focus:ring-4 focus:ring-aiko-teal/5 min-h-[140px] resize-none border-2 border-transparent focus:border-aiko-teal/20 transition-all"
                             value={profileData.bio}
                             onChange={(e: any) => setProfileData({...profileData, bio: e.target.value})}
                           />
                         </div>
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-2 gap-2">
                           <FormSelect
                             label={t.wilaya_label}
                             icon={MapPin}
@@ -2969,16 +2947,16 @@ export default function App() {
                         </div>
                       </div>
 
-                      <div className="flex gap-4 pt-4 pb-20">
+                      <div className="flex gap-2 pt-4 pb-20">
                          <button 
                           onClick={() => setIsEditingProfile(false)}
-                          className="flex-1 py-5 rounded-[2rem] bg-aiko-gray-100 text-aiko-navy font-black text-sm uppercase tracking-widest hover:bg-aiko-gray-200 transition-all"
+                          className="flex-1 py-3 rounded-[2rem] bg-aiko-gray-100 text-aiko-navy font-black text-sm uppercase tracking-widest hover:bg-aiko-gray-200 transition-all"
                         >
                           {isRTL ? "إلغاء" : "Cancel"}
                         </button>
                         <button 
                           onClick={handleUpdateProfile}
-                          className="flex-[2] py-5 rounded-[2rem] bg-aiko-teal text-white font-black text-sm uppercase tracking-widest hover:bg-aiko-teal-dark transition-all shadow-xl shadow-aiko-teal/20"
+                          className="flex-[2] py-3 rounded-[2rem] bg-aiko-teal text-white font-black text-sm uppercase tracking-widest hover:bg-aiko-teal-dark transition-all shadow-xl shadow-aiko-teal/20"
                         >
                           {isRTL ? "حفظ التغييرات" : "Save Changes"}
                         </button>
@@ -2986,9 +2964,9 @@ export default function App() {
                     </div>
                   ) : (
                     <>
-                      <div className="bento-card p-8 text-center relative overflow-hidden group">
+                      <div className="bento-card p-4 text-center relative overflow-hidden group">
                         <div className="absolute inset-0 bg-gradient-to-br from-aiko-teal/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                        <div className="w-28 h-28 bg-aiko-teal-bg rounded-[2.5rem] mx-auto mb-6 flex items-center justify-center p-1 border-4 border-white shadow-xl relative z-10 group cursor-pointer overflow-hidden">
+                        <div className="w-28 h-28 bg-aiko-teal-bg rounded-[2.5rem] mx-auto mb-2 flex items-center justify-center p-1 border-4 border-white shadow-xl relative z-10 group cursor-pointer overflow-hidden">
                           <img 
                             src={profileData.avatar || `https://images.unsplash.com/photo-${userRole === 'worker' ? '1507003211169-0a1dd7228f2d' : '1438761681033-6461ffad8d80'}?w=200&h=200&fit=crop`}
                             className="w-full h-full rounded-[2rem] object-cover transition-transform group-hover:scale-110" 
@@ -2999,11 +2977,11 @@ export default function App() {
                           </div>
                         </div>
                         <h3 className="text-2xl font-black text-aiko-navy mb-2 relative z-10">{profileData.name}</h3>
-                        <div className="flex items-center justify-center gap-2 text-aiko-teal font-black text-sm mb-4 relative z-10">
+                        <div className="flex items-center justify-center gap-2 text-aiko-teal font-black text-sm mb-2 relative z-10">
                           <MapPin size={16} />
                           <span>{profileData.location || (isRTL ? 'الجزائر العاصمة' : 'Algiers Center')}</span>
                         </div>
-                        <div className="flex justify-center gap-8 relative z-10">
+                        <div className="flex justify-center gap-4 relative z-10">
                           <div className="text-center group/stat cursor-pointer">
                             <p className="text-xl font-black text-aiko-navy group-hover:text-aiko-teal transition-colors">
                               {currentUser?.role === 'worker' ? (workerReviewsData.averageRating?.toFixed(1) || "0.0") : (currentUser?.rating || "5.0")}
@@ -3034,7 +3012,7 @@ export default function App() {
                         </div>
                       </div>
 
-                      <div className="space-y-4">
+                      <div className="space-y-2">
                         <div className="flex items-center justify-between">
                           <SectionTitle title={isRTL ? "نبذة عني" : "About Me"} />
                           <button 
@@ -3045,21 +3023,21 @@ export default function App() {
                             {isRTL ? "تعديل" : "Edit"}
                           </button>
                         </div>
-                        <div className="bento-card p-6 border-2 border-transparent hover:border-aiko-teal/5 transition-all">
+                        <div className="bento-card p-2 border-2 border-transparent hover:border-aiko-teal/5 transition-all">
                           <p className="text-sm font-bold text-aiko-navy/60 leading-relaxed">
                             {profileData.bio}
                           </p>
                         </div>
                       </div>
 
-                      <div className="space-y-4">
+                      <div className="space-y-2">
                         <div className="flex items-center justify-between">
                           <SectionTitle title={isRTL ? (userRole === 'worker' ? "معرض أعمالي" : "معرض صوري") : (userRole === 'worker' ? "Works Gallery" : "Photo Gallery")} />
                           <button className="w-10 h-10 rounded-xl bg-aiko-teal-bg text-aiko-teal flex items-center justify-center hover:bg-aiko-teal hover:text-white transition-all">
                             <Plus size={20} />
                           </button>
                         </div>
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-2 gap-2">
                           {profileData.portfolio.map((img, i) => (
                             <div key={i} className="aspect-video rounded-3xl overflow-hidden shadow-sm border-4 border-white group cursor-pointer hover:shadow-lg transition-all relative">
                               <img src={img} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" alt="Work" />
@@ -3093,12 +3071,12 @@ export default function App() {
                         </div>
                       </div>
 
-                      <div className="space-y-6">
+                      <div className="space-y-3">
                         <SectionTitle title={isRTL ? "الآراء والتقييمات" : "Ratings & Reviews"} />
                         
-                        <div className="space-y-4">
+                        <div className="space-y-2">
                           {workerReviewsData.reviews.slice(0, 3).map((review) => (
-                            <div key={review.id} className="bento-card p-6 hover:translate-x-1 transition-transform space-y-4">
+                            <div key={review.id} className="bento-card p-2 hover:translate-x-1 transition-transform space-y-2">
                               <div className="flex items-center gap-3">
                                 <div
                                   onClick={() => handleViewProfile(review.employer.id)}
@@ -3130,14 +3108,14 @@ export default function App() {
                           ))}
                           {workerReviewsData.reviews.length === 0 && (
                             <div className="text-center py-10 text-aiko-navy/20 bg-white rounded-[2rem]">
-                              <Star size={48} className="mx-auto mb-4 opacity-10" />
+                              <Star size={48} className="mx-auto mb-2 opacity-10" />
                               <p className="font-bold">{isRTL ? "لا توجد تقييمات بعد" : "No reviews yet"}</p>
                             </div>
                           )}
                         </div>
                       </div>
 
-                      <div className="space-y-4">
+                      <div className="space-y-2">
                         <SectionTitle title={isRTL ? "إعدادات إضافية" : "Additional Settings"} />
                         <div className="space-y-2">
                           {[
@@ -3150,7 +3128,7 @@ export default function App() {
                               onClick={item.action}
                               className="w-full flex items-center justify-between p-5 rounded-2xl bg-white hover:bg-aiko-gray-100 transition-colors shadow-sm"
                             >
-                              <div className="flex items-center gap-4">
+                              <div className="flex items-center gap-2">
                                 <item.icon size={20} className={"text-aiko-navy/40"} />
                                 <span className={`text-sm font-bold text-aiko-navy`}>{item.label}</span>
                               </div>
@@ -3161,7 +3139,7 @@ export default function App() {
                         {showInstallBtn && (
                           <button
                             onClick={handleInstallClick}
-                            className="w-full py-5 rounded-[2rem] bg-aiko-teal-bg text-aiko-teal font-black text-sm uppercase tracking-widest hover:bg-aiko-teal/10 transition-all flex items-center justify-center gap-3"
+                            className="w-full py-3 rounded-[2rem] bg-aiko-teal-bg text-aiko-teal font-black text-sm uppercase tracking-widest hover:bg-aiko-teal/10 transition-all flex items-center justify-center gap-3"
                           >
                             <Plus size={20} />
                             {t.install_app}
@@ -3169,12 +3147,12 @@ export default function App() {
                         )}
                         <button
                           onClick={() => setShowDeleteAccountModal(true)}
-                          className="w-full bg-red-500 text-white py-5 rounded-[2rem] uppercase font-black tracking-widest flex items-center justify-center gap-3 shadow-huge hover:bg-red-600 transition-all"
+                          className="w-full bg-red-500 text-white py-3 rounded-[2rem] uppercase font-black tracking-widest flex items-center justify-center gap-3 shadow-huge hover:bg-red-600 transition-all"
                         >
                           <Trash2 size={20} />
                           {isRTL ? "حذف الحساب" : lang === 'fr' ? "Supprimer le compte" : "Delete Account"}
                         </button>
-                        <button onClick={handleLogout} className="w-full btn-orange py-5 uppercase tracking-widest flex items-center justify-center gap-3 shadow-huge">
+                        <button onClick={handleLogout} className="w-full btn-orange py-3 uppercase tracking-widest flex items-center justify-center gap-3 shadow-huge">
                           <Trash2 size={20} />
                           {t.logout}
                         </button>
@@ -3186,8 +3164,8 @@ export default function App() {
             </main>
 
             {/* Nav Bar */}
-            <div className="fixed bottom-0 left-0 right-0 p-6 bg-linear-to-t from-aiko-gray-100 to-transparent pointer-events-none z-[80]">
-              <nav className="bg-white p-4 rounded-[32px] shadow-huge flex items-center justify-around pointer-events-auto border border-aiko-teal/5">
+            <div className="flex-none bg-white border-t border-aiko-gray-100 p-2 z-[80]">
+              <nav className="flex items-center justify-around">
                 <NavItem icon={userRole === 'worker' ? Globe : Search} label={userRole === 'worker' ? t.nav_jobs : t.nav_workers} active={activeTab === 'feed'} onClick={() => setActiveTab('feed')} i18nKey={userRole === 'worker' ? "nav_jobs" : "nav_workers"} />
                 <NavItem icon={Briefcase} label={userRole === 'worker' ? t.nav_requests : t.nav_myjobs} active={activeTab === 'activity'} onClick={() => setActiveTab('activity')} count={1} i18nKey={userRole === 'worker' ? "nav_requests" : "nav_myjobs"} />
                 <NavItem
@@ -3205,7 +3183,7 @@ export default function App() {
             {/* Detail Modal */}
             <AnimatePresence>
               {activeItem && (
-                <div className="fixed inset-0 z-[100] flex items-end justify-center p-4">
+                <div className="fixed inset-0 z-[100] flex items-end justify-center p-2">
                   <motion.div 
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
@@ -3217,19 +3195,19 @@ export default function App() {
                     initial={{ y: "100%" }}
                     animate={{ y: 0 }}
                     exit={{ y: "100%" }}
-                    className="relative w-full max-w-lg bg-white rounded-[40px] p-8 shadow-2xl overflow-hidden"
+                    className="relative w-full max-w-lg bg-white rounded-[24px] p-4 shadow-2xl overflow-hidden"
                   >
                     <div className="absolute top-0 left-0 right-0 h-2 bg-linear-to-r from-aiko-teal to-aiko-orange" />
-                    <button onClick={() => setActiveItem(null)} className="absolute top-6 right-6 p-2 text-aiko-navy/20 hover:text-aiko-navy transition-colors"><X size={24} /></button>
+                    <button onClick={() => setActiveItem(null)} className="absolute top-2 right-6 p-2 text-aiko-navy/20 hover:text-aiko-navy transition-colors"><X size={24} /></button>
                     
-                    <div className="flex flex-col items-center text-center space-y-6 pt-4">
+                    <div className="flex flex-col items-center text-center space-y-3 pt-4">
                       <div
                         onClick={() => {
                           if (activeItem.employerId) handleViewProfile(activeItem.employerId);
                           else if (activeItem.workerId) handleViewProfile(activeItem.workerId);
                           else if (activeItem.worker?.id) handleViewProfile(activeItem.worker.id);
                         }}
-                        className="w-24 h-24 bg-aiko-teal-bg text-aiko-teal rounded-[32px] flex items-center justify-center cursor-pointer hover:scale-105 transition-transform"
+                        className="w-24 h-24 bg-aiko-teal-bg text-aiko-teal rounded-[16px] flex items-center justify-center cursor-pointer hover:scale-105 transition-transform"
                       >
                         <activeItem.icon size={48} />
                       </div>
@@ -3247,12 +3225,12 @@ export default function App() {
                         </p>
                       </div>
                       
-                      <div className="grid grid-cols-2 gap-4 w-full">
-                        <div className="bg-aiko-gray-100 p-4 rounded-2xl">
+                      <div className="grid grid-cols-2 gap-2 w-full">
+                        <div className="bg-aiko-gray-100 p-2 rounded-2xl">
                           <p className="text-[10px] font-black uppercase tracking-widest text-aiko-navy/30">{isRTL ? "الموقع" : "Location"}</p>
                           <p className="text-sm font-black text-aiko-navy mt-1">{activeItem.location || activeItem.distance}</p>
                         </div>
-                        <div className="bg-aiko-teal-bg p-4 rounded-2xl">
+                        <div className="bg-aiko-teal-bg p-2 rounded-2xl">
                           <p className="text-[10px] font-black uppercase tracking-widest text-aiko-teal-dark/30">{isRTL ? "الميزانية" : "Budget"}</p>
                           <p className="text-sm font-black text-aiko-teal-dark mt-1">{activeItem.price}</p>
                         </div>
@@ -3287,11 +3265,11 @@ export default function App() {
                                 }
                             }
                           }}
-                          className="btn-primary w-full py-5 text-sm uppercase tracking-[0.2em]"
+                          className="btn-primary w-full py-3 text-sm uppercase tracking-[0.2em]"
                         >
                           {userRole === 'worker' ? (isRTL ? "تقديم طلب الآن" : "Apply Protocol") : (isRTL ? "إرسال عرض/عقد" : "Send Offer/Contract")}
                         </button>
-                        <button className="w-full py-4 text-xs font-black text-aiko-navy/30 uppercase tracking-widest hover:text-aiko-navy transition-colors">
+                        <button className="w-full py-2 text-xs font-black text-aiko-navy/30 uppercase tracking-widest hover:text-aiko-navy transition-colors">
                           {isRTL ? "حفظ للمراجعة" : "Save for Review"}
                         </button>
                       </div>
@@ -3321,8 +3299,8 @@ export default function App() {
                       transition={{ type: "spring", damping: 25, stiffness: 200 }}
                       className={`fixed inset-y-0 ${isRTL ? 'right-0' : 'left-0'} w-full sm:w-[450px] bg-aiko-gray-50 z-[111] shadow-2xl flex flex-col`}
                     >
-                      <div className="p-8 bg-white border-b border-aiko-gray-100 flex items-center justify-between">
-                        <div className="flex items-center gap-4">
+                      <div className="p-4 bg-white border-b border-aiko-gray-100 flex items-center justify-between">
+                        <div className="flex items-center gap-2">
                           <button 
                             onClick={() => setShowNotification(false)} 
                             className="w-12 h-12 rounded-2xl bg-aiko-gray-100 flex items-center justify-center text-aiko-navy hover:bg-aiko-teal-bg hover:text-aiko-teal transition-all active:scale-95"
@@ -3340,7 +3318,7 @@ export default function App() {
                         </button>
                       </div>
 
-                      <div className="flex-1 overflow-y-auto p-6 space-y-6 no-scrollbar pb-12">
+                      <div className="flex-1 overflow-y-auto p-2 space-y-3 no-scrollbar pb-12">
                         {notifications.map((notif, idx) => (
                           <motion.div 
                             key={notif.id}
@@ -3387,7 +3365,7 @@ export default function App() {
                                 setActiveTab('profile');
                               }
                             }}
-                            className={`p-6 rounded-[2.5rem] bg-white shadow-sm border-2 transition-all relative group flex items-center gap-5 cursor-pointer ${!notif.isRead ? 'border-aiko-teal shadow-xl shadow-aiko-teal/5' : 'border-transparent hover:border-aiko-teal/20'}`}
+                            className={`p-2 rounded-[2.5rem] bg-white shadow-sm border-2 transition-all relative group flex items-center gap-5 cursor-pointer ${!notif.isRead ? 'border-aiko-teal shadow-xl shadow-aiko-teal/5' : 'border-transparent hover:border-aiko-teal/20'}`}
                           >
                             {!notif.isRead && (
                               <div className={`absolute top-1/2 -translate-y-1/2 ${isRTL ? 'right-2' : 'left-2'} w-2 h-2 bg-aiko-teal rounded-full shadow-lg shadow-aiko-teal/40 animate-pulse`} />
@@ -3440,7 +3418,7 @@ export default function App() {
                         ))}
 
                         {notifications.length === 0 && (
-                          <div className="flex flex-col items-center justify-center py-20 text-center space-y-4">
+                          <div className="flex flex-col items-center justify-center py-20 text-center space-y-2">
                             <div className="w-24 h-24 bg-aiko-gray-100 rounded-full flex items-center justify-center text-aiko-navy/20">
                               <Bell size={48} />
                             </div>
@@ -3468,7 +3446,7 @@ export default function App() {
                     exit={{ opacity: 0, scale: 0.9 }}
                     className="fixed bottom-28 left-6 right-6 z-[300] flex justify-center pointer-events-none"
                   >
-                    <div className="bg-aiko-navy text-white px-8 py-4 rounded-2xl shadow-2xl flex items-center gap-3 border border-white/10 backdrop-blur-md">
+                    <div className="bg-aiko-navy text-white px-8 py-2 rounded-2xl shadow-2xl flex items-center gap-3 border border-white/10 backdrop-blur-md">
                       <div className={`w-8 h-8 rounded-full flex items-center justify-center ${toast.type === 'success' ? 'bg-aiko-teal text-white' : 'bg-red-500 text-white'}`}>
                         {toast.type === 'success' ? <CheckCircle2 size={18} /> : <X size={18} />}
                       </div>
@@ -3485,7 +3463,7 @@ export default function App() {
             {/* Delete Account Confirmation Modal */}
             <AnimatePresence>
               {showDeleteAccountModal && (
-                <div className="fixed inset-0 z-[400] flex items-center justify-center p-6">
+                <div className="fixed inset-0 z-[400] flex items-center justify-center p-2">
                   <motion.div
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
@@ -3497,7 +3475,7 @@ export default function App() {
                     initial={{ scale: 0.9, opacity: 0 }}
                     animate={{ scale: 1, opacity: 1 }}
                     exit={{ scale: 0.9, opacity: 0 }}
-                    className="relative w-full max-w-sm bg-white rounded-[40px] p-8 shadow-2xl space-y-6 text-center"
+                    className="relative w-full max-w-sm bg-white rounded-[24px] p-4 shadow-2xl space-y-3 text-center"
                   >
                     <div className="w-16 h-16 bg-red-100 text-red-500 rounded-2xl flex items-center justify-center mx-auto">
                       <Trash2 size={32} />
@@ -3517,13 +3495,13 @@ export default function App() {
                     <div className="flex flex-col gap-3">
                       <button
                         onClick={handleDeleteAccount}
-                        className="w-full py-4 rounded-2xl bg-red-500 text-white font-black text-sm uppercase tracking-widest hover:bg-red-600 transition-all"
+                        className="w-full py-2 rounded-2xl bg-red-500 text-white font-black text-sm uppercase tracking-widest hover:bg-red-600 transition-all"
                       >
                         {isRTL ? "تأكيد الحذف" : lang === 'fr' ? "Confirmer la suppression" : "Confirm Deletion"}
                       </button>
                       <button
                         onClick={() => setShowDeleteAccountModal(false)}
-                        className="w-full py-4 rounded-2xl bg-aiko-gray-100 text-aiko-navy font-black text-sm uppercase tracking-widest hover:bg-aiko-gray-200 transition-all"
+                        className="w-full py-2 rounded-2xl bg-aiko-gray-100 text-aiko-navy font-black text-sm uppercase tracking-widest hover:bg-aiko-gray-200 transition-all"
                       >
                         {isRTL ? "إلغاء" : lang === 'fr' ? "Annuler" : "Cancel"}
                       </button>
@@ -3536,7 +3514,7 @@ export default function App() {
             {/* Review Modal */}
             <AnimatePresence>
               {showReviewModal && (
-                <div className="fixed inset-0 z-[300] flex items-center justify-center p-6">
+                <div className="fixed inset-0 z-[300] flex items-center justify-center p-2">
                   <motion.div
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
@@ -3548,9 +3526,9 @@ export default function App() {
                     initial={{ scale: 0.9, opacity: 0 }}
                     animate={{ scale: 1, opacity: 1 }}
                     exit={{ scale: 0.9, opacity: 0 }}
-                    className="relative w-full max-w-sm bg-white rounded-[40px] p-8 shadow-2xl space-y-6"
+                    className="relative w-full max-w-sm bg-white rounded-[24px] p-4 shadow-2xl space-y-3"
                   >
-                    <div className="flex flex-col items-center text-center space-y-2 mb-4">
+                    <div className="flex flex-col items-center text-center space-y-2 mb-2">
                        <div className="w-16 h-16 bg-aiko-orange/10 text-aiko-orange rounded-2xl flex items-center justify-center mb-2">
                           <Star size={32} fill="currentColor" />
                        </div>
@@ -3575,21 +3553,21 @@ export default function App() {
                       <textarea
                         value={reviewData.comment}
                         onChange={(e) => setReviewData({ ...reviewData, comment: e.target.value })}
-                        className="w-full bg-aiko-gray-50 rounded-2xl p-4 text-sm font-bold text-aiko-navy focus:outline-none focus:ring-2 focus:ring-aiko-teal/20 min-h-[100px] resize-none border-2 border-transparent focus:border-aiko-teal/10 transition-all"
+                        className="w-full bg-aiko-gray-50 rounded-2xl p-2 text-sm font-bold text-aiko-navy focus:outline-none focus:ring-2 focus:ring-aiko-teal/20 min-h-[100px] resize-none border-2 border-transparent focus:border-aiko-teal/10 transition-all"
                         placeholder={isRTL ? "اكتب تعليقك هنا..." : "Write your comment here..."}
                       />
                     </div>
 
-                    <div className="flex gap-4">
+                    <div className="flex gap-2">
                       <button
                         onClick={() => setShowReviewModal(false)}
-                        className="flex-1 py-4 rounded-2xl bg-aiko-gray-100 text-aiko-navy font-black text-xs uppercase tracking-widest hover:bg-aiko-gray-200 transition-all"
+                        className="flex-1 py-2 rounded-2xl bg-aiko-gray-100 text-aiko-navy font-black text-xs uppercase tracking-widest hover:bg-aiko-gray-200 transition-all"
                       >
                         {isRTL ? "تخطي" : "Skip"}
                       </button>
                       <button
                         onClick={submitReview}
-                        className="flex-[2] py-4 rounded-2xl bg-aiko-teal text-white font-black text-xs uppercase tracking-widest hover:bg-aiko-teal-dark transition-all shadow-xl shadow-aiko-teal/20"
+                        className="flex-[2] py-2 rounded-2xl bg-aiko-teal text-white font-black text-xs uppercase tracking-widest hover:bg-aiko-teal-dark transition-all shadow-xl shadow-aiko-teal/20"
                       >
                         {isRTL ? "إرسال التقييم" : "Submit Review"}
                       </button>
@@ -3602,7 +3580,7 @@ export default function App() {
             {/* User Profile Modal */}
             <AnimatePresence>
               {showUserProfileModal && viewedUser && (
-                <div className="fixed inset-0 z-[300] flex items-center justify-center p-6">
+                <div className="fixed inset-0 z-[300] flex items-center justify-center p-2">
                   <motion.div
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
@@ -3614,16 +3592,16 @@ export default function App() {
                     initial={{ scale: 0.9, opacity: 0 }}
                     animate={{ scale: 1, opacity: 1 }}
                     exit={{ scale: 0.9, opacity: 0 }}
-                    className="relative w-full max-w-sm bg-white rounded-[40px] p-8 shadow-2xl space-y-6 max-h-[90vh] overflow-y-auto no-scrollbar"
+                    className="relative w-full max-w-sm bg-white rounded-[24px] p-4 shadow-2xl space-y-3 max-h-[90vh] overflow-y-auto no-scrollbar"
                   >
                     <button
                       onClick={() => setShowUserProfileModal(false)}
-                      className="absolute top-6 right-6 p-2 bg-aiko-gray-100 rounded-xl text-aiko-navy/40 hover:text-aiko-navy transition-all"
+                      className="absolute top-2 right-6 p-2 bg-aiko-gray-100 rounded-xl text-aiko-navy/40 hover:text-aiko-navy transition-all"
                     >
                       <X size={20} />
                     </button>
 
-                    <div className="flex flex-col items-center text-center space-y-4">
+                    <div className="flex flex-col items-center text-center space-y-2">
                       <div className="w-24 h-24 bg-aiko-teal-bg rounded-[2.5rem] flex items-center justify-center p-1 border-4 border-white shadow-xl overflow-hidden">
                         <img
                           src={viewedUser.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${viewedUser.name}`}
@@ -3652,10 +3630,10 @@ export default function App() {
                       </div>
                     </div>
 
-                    <div className="space-y-4">
+                    <div className="space-y-2">
                       <div className="space-y-2">
                         <SectionTitle title={isRTL ? "نبذة" : "Bio"} />
-                        <p className="text-sm font-bold text-aiko-navy/60 leading-relaxed bg-aiko-gray-50 p-4 rounded-2xl">
+                        <p className="text-sm font-bold text-aiko-navy/60 leading-relaxed bg-aiko-gray-50 p-2 rounded-2xl">
                           {viewedUser.bio || (isRTL ? "لا يوجد وصف حالياً" : "No bio provided")}
                         </p>
                       </div>
@@ -3676,7 +3654,7 @@ export default function App() {
 
                     <button
                       onClick={() => handleOpenChat(viewedUser)}
-                      className="w-full py-5 rounded-[2rem] bg-aiko-teal text-white font-black text-sm uppercase tracking-widest hover:bg-aiko-teal-dark transition-all shadow-xl shadow-aiko-teal/20 flex items-center justify-center gap-3"
+                      className="w-full py-3 rounded-[2rem] bg-aiko-teal text-white font-black text-sm uppercase tracking-widest hover:bg-aiko-teal-dark transition-all shadow-xl shadow-aiko-teal/20 flex items-center justify-center gap-3"
                     >
                       <MessageCircle size={20} />
                       {isRTL ? "تواصل معه" : "Contact Him"}
@@ -3689,7 +3667,7 @@ export default function App() {
             {/* Post Job Modal */}
             <AnimatePresence>
               {showPostJobModal && (
-                <div className="fixed inset-0 z-[300] flex items-center justify-center p-6">
+                <div className="fixed inset-0 z-[300] flex items-center justify-center p-2">
                   <motion.div
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
@@ -3701,7 +3679,7 @@ export default function App() {
                     initial={{ scale: 0.9, opacity: 0 }}
                     animate={{ scale: 1, opacity: 1 }}
                     exit={{ scale: 0.9, opacity: 0 }}
-                    className="relative w-full max-w-lg bg-white rounded-[40px] p-8 shadow-2xl flex flex-col gap-6 max-h-[90vh] overflow-y-auto no-scrollbar"
+                    className="relative w-full max-w-lg bg-white rounded-[24px] p-4 shadow-2xl flex flex-col gap-2 max-h-[90vh] overflow-y-auto no-scrollbar"
                   >
                     <div className="flex items-center justify-between">
                       <h2 className="text-2xl font-black text-aiko-navy">
@@ -3727,7 +3705,7 @@ export default function App() {
                       </button>
                     </div>
 
-                    <div className="space-y-4">
+                    <div className="space-y-2">
                       <FormInput
                         label={isRTL ? "العنوان" : "Title"}
                         placeholder={isRTL ? "مثال: مطلوب سباك لإصلاح تسريب" : "e.g. Need a plumber for leak repair"}
@@ -3750,13 +3728,13 @@ export default function App() {
                       <div className="space-y-2">
                         <label className="text-xs font-black uppercase tracking-widest text-aiko-navy/30 mx-2">{isRTL ? "الوصف" : "Description"}</label>
                         <textarea
-                          className="w-full bg-aiko-gray-100 p-4 rounded-2xl border-2 border-transparent focus:border-aiko-teal outline-none font-bold text-aiko-navy min-h-[100px] resize-none"
+                          className="w-full bg-aiko-gray-100 p-2 rounded-2xl border-2 border-transparent focus:border-aiko-teal outline-none font-bold text-aiko-navy min-h-[100px] resize-none"
                           value={serviceData.description}
                           onChange={(e) => setServiceData({...serviceData, description: e.target.value})}
                         />
                       </div>
 
-                      <div className="grid grid-cols-2 gap-4">
+                      <div className="grid grid-cols-2 gap-2">
                         <FormSelect
                           label={t.wilaya_label}
                           icon={MapPin}
@@ -3782,7 +3760,7 @@ export default function App() {
 
                     <button
                       onClick={handleCreateService}
-                      className="w-full py-5 rounded-[2rem] bg-aiko-teal text-white font-black text-sm uppercase tracking-widest hover:bg-aiko-teal-dark transition-all shadow-xl shadow-aiko-teal/20 mt-4"
+                      className="w-full py-3 rounded-[2rem] bg-aiko-teal text-white font-black text-sm uppercase tracking-widest hover:bg-aiko-teal-dark transition-all shadow-xl shadow-aiko-teal/20 mt-4"
                     >
                       {isEditingService
                         ? (isRTL ? "حفظ التعديلات" : "Save Changes")
@@ -3800,7 +3778,7 @@ export default function App() {
             {/* Instant Requests Modal */}
             <AnimatePresence>
               {showInstantRequestsModal && (
-                <div className="fixed inset-0 z-[300] flex items-center justify-center p-6">
+                <div className="fixed inset-0 z-[300] flex items-center justify-center p-2">
                   <motion.div
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
@@ -3812,16 +3790,16 @@ export default function App() {
                     initial={{ scale: 0.9, opacity: 0 }}
                     animate={{ scale: 1, opacity: 1 }}
                     exit={{ scale: 0.9, opacity: 0 }}
-                    className="relative w-full max-w-lg bg-white rounded-[40px] p-8 shadow-2xl flex flex-col gap-6 max-h-[90vh] overflow-y-auto no-scrollbar"
+                    className="relative w-full max-w-lg bg-white rounded-[24px] p-4 shadow-2xl flex flex-col gap-2 max-h-[90vh] overflow-y-auto no-scrollbar"
                   >
                     <div className="flex items-center justify-between">
                       <h2 className="text-2xl font-black text-aiko-navy">{isRTL ? "الطلبات الفورية النشطة" : "Active Instant Requests"}</h2>
                       <button onClick={() => setShowInstantRequestsModal(false)} className="p-2 bg-aiko-gray-100 rounded-xl text-aiko-navy/40 hover:text-aiko-navy transition-all"><X size={20} /></button>
                     </div>
 
-                    <div className="space-y-4">
+                    <div className="space-y-2">
                       {activeInstantRequests.map(req => (
-                        <div key={req.id} className="bento-card p-6 flex items-center justify-between group hover:border-aiko-teal transition-all">
+                        <div key={req.id} className="bento-card p-2 flex items-center justify-between group hover:border-aiko-teal transition-all">
                           <div>
                             <h4 className="font-black text-aiko-navy">{req.title}</h4>
                             <p
@@ -3856,7 +3834,7 @@ export default function App() {
                       ))}
                       {activeInstantRequests.length === 0 && (
                         <div className="text-center py-10 text-aiko-navy/20">
-                          <Zap size={48} className="mx-auto mb-4 opacity-10" />
+                          <Zap size={48} className="mx-auto mb-2 opacity-10" />
                           <p className="font-bold">{isRTL ? "لا توجد طلبات فورية حالياً" : "No active instant requests"}</p>
                         </div>
                       )}
@@ -3885,7 +3863,7 @@ export default function App() {
               animate={{ y: 0 }}
               exit={{ y: "100%" }}
               transition={{ type: "spring", damping: 25, stiffness: 200 }}
-              className="fixed bottom-0 left-0 right-0 max-h-[92vh] bg-white rounded-t-[50px] z-[101] shadow-2xl flex flex-col p-8 pt-4 overflow-y-auto no-scrollbar scroll-smooth"
+              className="fixed bottom-0 left-0 right-0 max-h-[92vh] bg-white rounded-t-[50px] z-[101] shadow-2xl flex flex-col p-4 pt-4 overflow-y-auto no-scrollbar scroll-smooth"
             >
               <div className="w-12 h-1.5 bg-aiko-gray-200 rounded-full mx-auto mb-8" />
               
@@ -3898,12 +3876,12 @@ export default function App() {
 
               <div className="space-y-12 pb-12">
                 {/* Timing */}
-                <div className="space-y-6">
+                <div className="space-y-3">
                   <h4 className="text-xs font-black uppercase tracking-widest text-aiko-navy/30 flex items-center gap-3">
                     <Clock size={20} />
                     {isRTL ? 'التوقيت' : 'Timing'}
                   </h4>
-                  <div className="grid grid-cols-3 gap-4">
+                  <div className="grid grid-cols-3 gap-2">
                     {[
                       { id: 'now', label: isRTL ? 'الآن' : 'Now', icon: Zap },
                       { id: 'today', label: isRTL ? 'اليوم' : 'Today', icon: Calendar },
@@ -3922,12 +3900,12 @@ export default function App() {
                 </div>
 
                 {/* Distance */}
-                <div className="space-y-6">
+                <div className="space-y-3">
                   <h4 className="text-xs font-black uppercase tracking-widest text-aiko-navy/30 flex items-center gap-3">
                     <MapPin size={20} />
                     {isRTL ? 'المسافة' : 'Distance'}
                   </h4>
-                  <div className="grid grid-cols-3 gap-4">
+                  <div className="grid grid-cols-3 gap-2">
                     {[
                       { id: '2km', label: isRTL ? '2 كم' : '2 كم', icon: MapPin },
                       { id: '5km', label: isRTL ? '5 كم' : '5 كم', icon: MapPin },
@@ -3946,12 +3924,12 @@ export default function App() {
                 </div>
 
                 {/* Type */}
-                <div className="space-y-6">
+                <div className="space-y-3">
                   <h4 className="text-xs font-black uppercase tracking-widest text-aiko-navy/30 flex items-center gap-3">
                     <Briefcase size={20} />
                     {isRTL ? 'نوع التوظيف' : 'Hiring Type'}
                   </h4>
-                  <div className="flex flex-wrap gap-4">
+                  <div className="flex flex-wrap gap-2">
                     {[
                       { id: 'urgent', label: isRTL ? 'عاجل' : 'Urgent', color: 'bg-red-500' },
                       { id: 'part', label: isRTL ? 'جزئي' : 'Part-time', color: 'bg-orange-400' },
@@ -3960,7 +3938,7 @@ export default function App() {
                       <button 
                         key={item.id}
                         onClick={() => setFilters({...filters, type: item.id})}
-                        className={`px-8 py-4 rounded-[1.5rem] flex items-center gap-3 transition-all font-black text-sm border-3 ${filters.type === item.id ? 'bg-aiko-teal-bg border-aiko-teal text-aiko-teal-dark shadow-lg shadow-aiko-teal/10' : 'bg-white border-aiko-gray-100 text-aiko-navy/30 hover:border-aiko-teal/30'}`}
+                        className={`px-8 py-2 rounded-[1.5rem] flex items-center gap-3 transition-all font-black text-sm border-3 ${filters.type === item.id ? 'bg-aiko-teal-bg border-aiko-teal text-aiko-teal-dark shadow-lg shadow-aiko-teal/10' : 'bg-white border-aiko-gray-100 text-aiko-navy/30 hover:border-aiko-teal/30'}`}
                       >
                         <div className={`w-3 h-3 rounded-full ${item.color}`} />
                         {item.label}
@@ -3970,7 +3948,7 @@ export default function App() {
                 </div>
 
                 {/* Categories */}
-                <div className="space-y-6">
+                <div className="space-y-3">
                   <h4 className="text-xs font-black uppercase tracking-widest text-aiko-navy/40 flex items-center gap-3">
                     <Settings2 size={20} />
                   </h4>
@@ -3979,7 +3957,7 @@ export default function App() {
                       <button 
                         key={cat.id}
                         onClick={() => setCategory(cat.id)}
-                        className={`p-4 rounded-3xl border-3 flex items-center gap-3 transition-all ${category === cat.id ? 'bg-aiko-teal-bg border-aiko-teal text-aiko-teal-dark shadow-lg' : 'bg-white border-aiko-gray-100 text-aiko-navy/30 hover:border-aiko-teal/20'}`}
+                        className={`p-2 rounded-3xl border-3 flex items-center gap-3 transition-all ${category === cat.id ? 'bg-aiko-teal-bg border-aiko-teal text-aiko-teal-dark shadow-lg' : 'bg-white border-aiko-gray-100 text-aiko-navy/30 hover:border-aiko-teal/20'}`}
                       >
                         <cat.icon size={18} className={category === cat.id ? 'text-aiko-orange' : ''} />
                         <span className="text-[10px] font-black">{isRTL ? cat.name_ar : cat.name_en}</span>
@@ -3989,12 +3967,12 @@ export default function App() {
                 </div>
 
                 {/* Price Range */}
-                <div className="space-y-6">
+                <div className="space-y-3">
                   <h4 className="text-xs font-black uppercase tracking-widest text-aiko-navy/30 flex items-center gap-3">
                     <ImageIcon size={20} />
                     {isRTL ? 'نطاق السعر (DA)' : 'Price Range (DA)'}
                   </h4>
-                  <div className="grid grid-cols-2 gap-6">
+                  <div className="grid grid-cols-2 gap-2">
                     <div className="space-y-3">
                       <p className="text-[10px] font-black text-aiko-navy/30 text-center uppercase tracking-widest">{isRTL ? 'من' : 'From'}</p>
                       <input 
@@ -4002,7 +3980,7 @@ export default function App() {
                         placeholder="500"
                         value={filters.minPrice}
                         onChange={(e) => setFilters({...filters, minPrice: e.target.value})}
-                        className="w-full bg-aiko-gray-100 p-6 rounded-[1.5rem] border-3 border-transparent focus:border-aiko-teal bg-white transition-all outline-none font-black text-center text-xl"
+                        className="w-full bg-aiko-gray-100 p-2 rounded-[1.5rem] border-3 border-transparent focus:border-aiko-teal bg-white transition-all outline-none font-black text-center text-xl"
                       />
                     </div>
                     <div className="space-y-3">
@@ -4012,14 +3990,14 @@ export default function App() {
                         placeholder="5000"
                         value={filters.maxPrice}
                         onChange={(e) => setFilters({...filters, maxPrice: e.target.value})}
-                        className="w-full bg-aiko-gray-100 p-6 rounded-[1.5rem] border-3 border-transparent focus:border-aiko-teal bg-white transition-all outline-none font-black text-center text-xl"
+                        className="w-full bg-aiko-gray-100 p-2 rounded-[1.5rem] border-3 border-transparent focus:border-aiko-teal bg-white transition-all outline-none font-black text-center text-xl"
                       />
                     </div>
                   </div>
                 </div>
 
                 {/* Rating */}
-                <div className="space-y-6">
+                <div className="space-y-3">
                   <h4 className="text-xs font-black uppercase tracking-widest text-aiko-navy/30 flex items-center gap-3">
                     <Star size={20} />
                     {isRTL ? 'التقييم الأدنى' : 'Min Rating'}
@@ -4039,7 +4017,7 @@ export default function App() {
 
                 <button 
                   onClick={() => setShowFilters(false)}
-                  className="bg-aiko-teal text-white w-full py-6 rounded-[2.5rem] font-black text-lg shadow-2xl shadow-aiko-teal/30 mt-8 active:scale-95 transition-all"
+                  className="bg-aiko-teal text-white w-full py-6 rounded-[2.5rem] font-black text-lg shadow-2xl shadow-aiko-teal/30 mt-4 active:scale-95 transition-all"
                   data-i18n="apply_filter"
                 >
                   {isRTL ? 'تطبيق الفلتر' : 'Apply Filter'}
@@ -4066,7 +4044,7 @@ export default function App() {
               animate={{ y: 0 }}
               exit={{ y: "100%" }}
               transition={{ type: "spring", damping: 30, stiffness: 300 }}
-              className="relative w-full bg-white rounded-t-[50px] shadow-2xl flex flex-col p-8 pb-12 overflow-y-auto no-scrollbar max-h-[92vh]"
+              className="relative w-full bg-white rounded-t-[50px] shadow-2xl flex flex-col p-4 pb-12 overflow-y-auto no-scrollbar max-h-[92vh]"
             >
               <div className="w-12 h-1.5 bg-aiko-gray-200 rounded-full mx-auto mb-8" />
               
@@ -4079,11 +4057,11 @@ export default function App() {
 
               <div className="space-y-10">
                 {/* Work Type Selection */}
-                <div className="space-y-5">
+                <div className="space-y-2">
                   <h4 className="text-xs font-black uppercase text-aiko-navy/40 text-center tracking-widest font-mono">
                     {isRTL ? 'نوع الدوام' : 'Work Type'}
                   </h4>
-                  <div className="grid grid-cols-3 gap-4">
+                  <div className="grid grid-cols-3 gap-2">
                     {[
                       { id: 'now', label: isRTL ? (userRole === 'worker' ? 'متاح الآن' : 'استقبال الآن') : (userRole === 'worker' ? 'Available Now' : 'Active Now'), icon: Zap },
                       { id: 'part', label: isRTL ? 'دوام جزئي' : 'Part-time', icon: Sparkles },
@@ -4092,21 +4070,21 @@ export default function App() {
                       <button 
                         key={item.id}
                         onClick={() => setWorkerSettings({...workerSettings, type: item.id})}
-                        className={`p-6 rounded-[2rem] border-3 flex flex-col items-center gap-2 transition-all ${workerSettings.type === item.id ? 'bg-aiko-teal-bg border-aiko-teal text-aiko-teal-dark shadow-xl scale-105' : 'bg-white border-aiko-gray-100 text-aiko-navy/30 hover:border-aiko-teal/20'}`}
+                        className={`p-2 rounded-[2rem] border-3 flex flex-col items-center gap-2 transition-all ${workerSettings.type === item.id ? 'bg-aiko-teal-bg border-aiko-teal text-aiko-teal-dark shadow-xl scale-105' : 'bg-white border-aiko-gray-100 text-aiko-navy/30 hover:border-aiko-teal/20'}`}
                       >
                         <item.icon size={24} className={workerSettings.type === item.id ? 'text-aiko-orange' : ''} />
                         <span className="text-[10px] font-black leading-none">{item.label}</span>
                       </button>
                     ))}
                   </div>
-                  <div className="bg-aiko-teal/5 p-4 rounded-2xl flex items-center justify-center gap-3 text-aiko-teal-dark font-bold text-xs">
+                  <div className="bg-aiko-teal/5 p-2 rounded-2xl flex items-center justify-center gap-3 text-aiko-teal-dark font-bold text-xs">
                     <Zap size={14} fill="currentColor" />
                     <span>{isRTL ? "سيتم تحديث حالتك فوراً في المنصة" : "Status will be updated instantly"}</span>
                   </div>
                 </div>
 
                 {/* Start/End Time Validation */}
-                <div className="grid grid-cols-2 gap-6">
+                <div className="grid grid-cols-2 gap-2">
                   <div className="space-y-3">
                     <h4 className="text-xs font-black uppercase text-aiko-navy/40 text-center tracking-widest font-mono">
                       {isRTL ? 'بداية الدوام' : 'Start Time'}
@@ -4115,7 +4093,7 @@ export default function App() {
                       type="time"
                       value={workerSettings.startTime}
                       onChange={(e) => setWorkerSettings({...workerSettings, startTime: e.target.value})}
-                      className="w-full bg-aiko-gray-100 p-4 rounded-2xl border-2 border-transparent focus:border-aiko-teal bg-white transition-all outline-none font-black text-center"
+                      className="w-full bg-aiko-gray-100 p-2 rounded-2xl border-2 border-transparent focus:border-aiko-teal bg-white transition-all outline-none font-black text-center"
                     />
                   </div>
                   <div className="space-y-3">
@@ -4126,13 +4104,13 @@ export default function App() {
                       type="time"
                       value={workerSettings.endTime}
                       onChange={(e) => setWorkerSettings({...workerSettings, endTime: e.target.value})}
-                      className="w-full bg-aiko-gray-100 p-4 rounded-2xl border-2 border-transparent focus:border-aiko-teal bg-white transition-all outline-none font-black text-center"
+                      className="w-full bg-aiko-gray-100 p-2 rounded-2xl border-2 border-transparent focus:border-aiko-teal bg-white transition-all outline-none font-black text-center"
                     />
                   </div>
                 </div>
 
                 {/* Hourly Rate / Budget */}
-                <div className="space-y-5">
+                <div className="space-y-2">
                   <h4 className="text-xs font-black uppercase text-aiko-navy/40 text-center tracking-widest font-mono">
                     {userRole === 'worker' ? (isRTL ? 'سعرك المعلن (DA / ساعة)' : 'Hourly Rate (DA / Hour)') : (isRTL ? 'ميزانية الساعة (DA / ساعة)' : 'Budget (DA / Hour)')}
                   </h4>
@@ -4141,18 +4119,18 @@ export default function App() {
                     value={workerSettings.price}
                     onChange={(e) => setWorkerSettings({...workerSettings, price: e.target.value})}
                     placeholder="1500"
-                    className="w-full bg-aiko-gray-100 p-6 rounded-[1.5rem] border-3 border-transparent focus:border-aiko-teal bg-white transition-all outline-none font-black text-center text-2xl"
+                    className="w-full bg-aiko-gray-100 p-2 rounded-[1.5rem] border-3 border-transparent focus:border-aiko-teal bg-white transition-all outline-none font-black text-center text-2xl"
                   />
                 </div>
 
 
                 {/* Categories & Skills Selection */}
-                <div className="space-y-8">
-                  <div className="space-y-5">
+                <div className="space-y-2">
+                  <div className="space-y-2">
                     <h4 className="text-xs font-black uppercase text-aiko-navy/40 text-center tracking-widest font-mono">
                       {isRTL ? 'التخصص الرئيسي' : 'Main Specialization'}
                     </h4>
-                    <div className="flex overflow-x-auto no-scrollbar gap-4 pb-4 px-2">
+                    <div className="flex overflow-x-auto no-scrollbar gap-2 pb-4 px-2">
                        {SERVICE_CATEGORIES.map(category => (
                          <button 
                            key={category.id}
@@ -4168,7 +4146,7 @@ export default function App() {
                     </div>
                   </div>
 
-                  <div className="space-y-5">
+                  <div className="space-y-2">
                     <h4 className="text-xs font-black uppercase text-aiko-navy/40 text-center tracking-widest font-mono">
                       {isRTL ? 'المهارات الفرعية' : 'Sub-Skills'}
                     </h4>
@@ -4192,8 +4170,8 @@ export default function App() {
                 </div>
 
                 {/* Preview Section */}
-                <div className="bg-aiko-gray-50 p-6 rounded-3xl border-2 border-dashed border-aiko-teal/20">
-                   <h4 className="text-[10px] font-black uppercase text-aiko-teal tracking-widest mb-4">{isRTL ? "معاينة التوفر" : "Availability Preview"}</h4>
+                <div className="bg-aiko-gray-50 p-2 rounded-3xl border-2 border-dashed border-aiko-teal/20">
+                   <h4 className="text-[10px] font-black uppercase text-aiko-teal tracking-widest mb-2">{isRTL ? "معاينة التوفر" : "Availability Preview"}</h4>
                    <div className="space-y-2">
                       <p className="text-sm font-bold text-aiko-navy">
                         {isRTL ? "النوع:" : "Type:"} <span className="text-aiko-teal">{workerSettings.type}</span>
@@ -4224,7 +4202,7 @@ export default function App() {
                   </button>
                   <button 
                     onClick={() => setShowAvailabilityModal(false)}
-                    className="w-full py-4 text-sm font-black text-aiko-navy/30 uppercase tracking-widest hover:text-aiko-navy transition-colors"
+                    className="w-full py-2 text-sm font-black text-aiko-navy/30 uppercase tracking-widest hover:text-aiko-navy transition-colors"
                   >
                     {isRTL ? 'إلغاء' : 'Cancel'}
                   </button>
@@ -4238,7 +4216,7 @@ export default function App() {
       {/* --- Worker Availability Form Modal --- */}
       <AnimatePresence>
         {showWorkerAvailabilityForm && (
-          <div className="fixed inset-0 z-[200] flex items-center justify-center p-6">
+          <div className="fixed inset-0 z-[200] flex items-center justify-center p-2">
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -4250,14 +4228,14 @@ export default function App() {
               initial={{ scale: 0.9, opacity: 0, y: 20 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.9, opacity: 0, y: 20 }}
-              className="relative w-full max-w-2xl bg-white rounded-[40px] p-8 shadow-2xl flex flex-col gap-6 max-h-[90vh] overflow-y-auto no-scrollbar"
+              className="relative w-full max-w-2xl bg-white rounded-[24px] p-4 shadow-2xl flex flex-col gap-2 max-h-[90vh] overflow-y-auto no-scrollbar"
             >
               <div className="flex items-center justify-between">
                 <h2 className="text-2xl font-black text-aiko-navy">{isRTL ? "إعلان التوفر" : "Work Availability"}</h2>
                 <button onClick={() => setShowWorkerAvailabilityForm(false)} className="p-2 bg-aiko-gray-100 rounded-xl text-aiko-navy/40 hover:text-aiko-navy transition-all"><X size={20} /></button>
               </div>
 
-              <div className="space-y-6">
+              <div className="space-y-3">
                 <FormInput
                   label={isRTL ? "العنوان" : "Title"}
                   placeholder={isRTL ? "مثال: كهربائي محترف بخبرة 5 سنوات" : "e.g. Professional Electrician with 5 years experience"}
@@ -4280,13 +4258,13 @@ export default function App() {
                 <div className="space-y-2">
                   <label className="text-xs font-black uppercase tracking-widest text-aiko-navy/30 mx-2">{isRTL ? "الوصف التفصيلي" : "Description"}</label>
                   <textarea
-                    className="w-full bg-aiko-gray-100 p-4 rounded-2xl border-2 border-transparent focus:border-aiko-teal outline-none font-bold text-aiko-navy min-h-[100px] resize-none"
+                    className="w-full bg-aiko-gray-100 p-2 rounded-2xl border-2 border-transparent focus:border-aiko-teal outline-none font-bold text-aiko-navy min-h-[100px] resize-none"
                     value={workerAvailability?.description || ""}
                     onChange={(e) => setWorkerAvailability({...workerAvailability, description: e.target.value})}
                   />
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-2 gap-2">
                   <FormInput
                     label={isRTL ? "السعر بالساعة (دج)" : "Hourly Rate (DA)"}
                     type="number"
@@ -4303,7 +4281,7 @@ export default function App() {
                   />
                 </div>
 
-                <div className="space-y-4">
+                <div className="space-y-2">
                   <div className="flex items-center justify-between">
                     <label className="text-xs font-black uppercase tracking-widest text-aiko-navy/30 mx-2">
                       {isRTL ? "الولايات المتاحة" : "Available Wilayas"}
@@ -4313,7 +4291,7 @@ export default function App() {
                     </span>
                   </div>
 
-                  <div className="flex gap-2 mb-4">
+                  <div className="flex gap-2 mb-2">
                     <button
                       onClick={() => setWorkerAvailability({...workerAvailability, wilayas: ALGERIA_WILAYAS.map(w => w.split(' - ')[1])})}
                       className="px-4 py-2 rounded-xl bg-aiko-teal-bg text-aiko-teal font-black text-[10px] uppercase tracking-widest hover:bg-aiko-teal hover:text-white transition-all"
@@ -4375,7 +4353,7 @@ export default function App() {
                       console.error("Error publishing availability:", err);
                     }
                   }}
-                  className="w-full py-5 rounded-[2rem] bg-aiko-teal text-white font-black text-sm uppercase tracking-widest hover:bg-aiko-teal-dark transition-all shadow-xl shadow-aiko-teal/20 mt-4"
+                  className="w-full py-3 rounded-[2rem] bg-aiko-teal text-white font-black text-sm uppercase tracking-widest hover:bg-aiko-teal-dark transition-all shadow-xl shadow-aiko-teal/20 mt-4"
                 >
                   {isRTL ? "نشر الإعلان" : "Publish Advertisement"}
                 </button>
@@ -4394,7 +4372,7 @@ function RoleChoice({ icon: Icon, title, sub, description, active, onClick, i18n
   return (
     <button 
       onClick={onClick}
-      className={`relative flex flex-col p-8 rounded-[40px] text-left transition-all duration-700 border-4 overflow-hidden group ${active ? 'bg-white border-aiko-teal shadow-huge scale-102 mt-[-4px]' : 'bg-white/50 grayscale opacity-60 border-transparent shadow-sm hover:grayscale-0 hover:opacity-100 hover:scale-[1.01]'}`}
+      className={`relative flex flex-col p-4 rounded-[24px] text-left transition-all duration-700 border-4 overflow-hidden group ${active ? 'bg-white border-aiko-teal shadow-huge scale-102 mt-[-4px]' : 'bg-white/50 grayscale opacity-60 border-transparent shadow-sm hover:grayscale-0 hover:opacity-100 hover:scale-[1.01]'}`}
     >
       {active && (
         <motion.div 
@@ -4403,7 +4381,7 @@ function RoleChoice({ icon: Icon, title, sub, description, active, onClick, i18n
         />
       )}
       
-      <div className="flex items-center gap-6 mb-6">
+      <div className="flex items-center gap-2 mb-2">
         <div className={`w-20 h-20 rounded-3xl flex items-center justify-center flex-shrink-0 transition-all duration-700 transform ${active ? 'bg-aiko-teal text-white rotate-12 shadow-xl' : 'bg-aiko-gray-100 text-aiko-navy/20 group-hover:bg-aiko-teal-bg group-hover:text-aiko-teal'}`}>
           <Icon size={40} strokeWidth={1} />
         </div>
@@ -4413,7 +4391,7 @@ function RoleChoice({ icon: Icon, title, sub, description, active, onClick, i18n
         </div>
       </div>
       
-      <p className="text-sm font-medium text-aiko-navy/40 leading-relaxed mb-6 flex-1" data-i18n={i18nDescKey}>{description}</p>
+      <p className="text-sm font-medium text-aiko-navy/40 leading-relaxed mb-2 flex-1" data-i18n={i18nDescKey}>{description}</p>
       
       <div className={`flex items-center gap-3 transition-all duration-500 ${active ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
         <span className="text-[10px] font-black text-aiko-teal uppercase tracking-widest">{active ? "PROTOCOL ACTIVE" : "INITIALIZE"}</span>
