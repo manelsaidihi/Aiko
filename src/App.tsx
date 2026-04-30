@@ -586,18 +586,9 @@ const FormSelect = ({ label, icon: Icon, options, value, onChange, i18nLabel, is
 // --- Components ---
 
 const Logo = ({ size = "md", invert = false }: { size?: "sm" | "md" | "lg" | "xl", invert?: boolean }) => {
-  const dimensions = {
-    sm: "w-8 h-8",
-    md: "w-12 h-12",
-    lg: "w-20 h-20",
-    xl: "w-28 h-28"
-  }[size];
-
   return (
     <div className={`flex items-center gap-4 group cursor-pointer ${invert ? 'flex-col sm:flex-row' : ''}`}>
-      <div className={`${dimensions} relative bg-white rounded-2xl flex items-center justify-center shadow-md p-1`}>
-        <img src="/logo.png" alt="Aiko" style={{width: '40px', height: '40px', objectFit: 'contain'}} />
-      </div>
+      <img src="/logo.png" alt="Aiko" style={{width: '40px', height: '40px', objectFit: 'contain'}} />
       {(size === 'lg' || size === 'xl') && (
         <div className="flex flex-col -space-y-2">
           <span className={`font-extrabold tracking-tighter text-aiko-navy ${size === 'xl' ? 'text-6xl' : 'text-4xl'} ${invert ? 'text-white' : ''}`}>AIKO</span>
@@ -1104,6 +1095,7 @@ export default function App() {
 
   const handleOpenChat = (user: any) => {
     setActiveChatUser(user);
+    setActiveTab('chat');
     fetchChatHistory(user.id);
     if (socket) {
       socket.emit("mark_read", { otherUserId: user.id });
@@ -1753,9 +1745,7 @@ export default function App() {
 
             <div className={`flex-1 flex flex-col items-center justify-center space-y-8 bg-white rounded-[40px] p-8 shadow-sm border border-aiko-gray-100 ${authMode === 'signup' ? 'my-4' : ''}`}>
               {authMode === 'login' && (
-                <div className="w-12 h-12 bg-aiko-teal-bg rounded-full flex items-center justify-center mb-2">
-                  <Logo size="sm" />
-                </div>
+                <Logo size="sm" />
               )}
               
               <div className="text-center space-y-2">
@@ -2028,9 +2018,7 @@ export default function App() {
                   <div className="text-right">
                     <h3 className="text-lg font-black text-aiko-navy leading-none">Aiko</h3>
                   </div>
-                  <div className="w-10 h-10 bg-white rounded-2xl flex items-center justify-center p-2 shadow-sm">
-                    <img src="/logo.png" alt="Aiko" style={{width: '40px', height: '40px', objectFit: 'contain'}} />
-                  </div>
+                  <img src="/logo.png" alt="Aiko" style={{width: '40px', height: '40px', objectFit: 'contain'}} />
                 </div>
               </div>
 
