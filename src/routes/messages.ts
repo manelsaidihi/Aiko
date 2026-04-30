@@ -82,7 +82,7 @@ router.get('/conversations', authenticateRequest, async (req: AuthRequest, res) 
     for (const [otherUserId, data] of conversationMap.entries()) {
       const otherUser = await prisma.user.findUnique({
         where: { id: otherUserId },
-        select: { id: true, name: true, role: true }
+        select: { id: true, name: true, role: true, avatar: true }
       });
 
       if (otherUser) {
