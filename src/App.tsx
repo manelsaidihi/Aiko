@@ -2541,7 +2541,7 @@ export default function App() {
                         <button
                           onClick={() => {
                             setActiveChatUser(null);
-                            setChatSearchQuery('');
+                            setSearchQuery('');
                             fetchConversations();
                           }}
                           className="w-10 h-10 rounded-xl bg-aiko-gray-100 flex items-center justify-center text-aiko-navy"
