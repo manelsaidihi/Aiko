@@ -798,6 +798,8 @@ export default function App() {
   const [showAvailabilityModal, setShowAvailabilityModal] = useState(false);
   const [showWorkerAvailabilityForm, setShowWorkerAvailabilityForm] = useState(false);
   const [showDeleteAccountModal, setShowDeleteAccountModal] = useState(false);
+  const [showUserProfileModal, setShowUserProfileModal] = useState(false);
+  const [viewedUser, setViewedUser] = useState<any>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [toast, setToast] = useState<{ message: string, type: 'success' | 'error' } | null>(null);
   const [isRTL, setIsRTL] = useState(lang === "ar");
@@ -1097,11 +1099,27 @@ export default function App() {
     setChatMessages([]);
     setActiveChatUser(user);
     setActiveTab('chat');
+    setShowUserProfileModal(false);
     fetchChatHistory(user.id);
     if (socket) {
       socket.emit("mark_read", { otherUserId: user.id });
     }
     fetchConversations();
+  };
+
+  const handleViewProfile = async (userId: string) => {
+    try {
+      const response = await fetch(`/api/auth/user/${userId}`, {
+        headers: { "Authorization": `Bearer ${authService.getToken()}` }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setViewedUser(data);
+        setShowUserProfileModal(true);
+      }
+    } catch (err) {
+      console.error("Error fetching user profile:", err);
+    }
   };
 
   const handleSendMessage = () => {
@@ -2223,11 +2241,14 @@ export default function App() {
                           >
                             <div className="flex items-start justify-between">
                               <div className="flex items-center gap-4">
-                                <div className="w-14 h-14 bg-aiko-teal-bg text-aiko-teal rounded-2xl flex items-center justify-center">
+                                <div
+                                  onClick={() => handleViewProfile(avail.worker.id)}
+                                  className="w-14 h-14 bg-aiko-teal-bg text-aiko-teal rounded-2xl flex items-center justify-center cursor-pointer hover:scale-105 transition-transform"
+                                >
                                   <UserIcon size={28} />
                                 </div>
-                                <div>
-                                  <h4 className="font-extrabold text-aiko-navy">{avail.worker.name}</h4>
+                                <div onClick={() => handleViewProfile(avail.worker.id)} className="cursor-pointer">
+                                  <h4 className="font-extrabold text-aiko-navy hover:text-aiko-teal transition-colors">{avail.worker.name}</h4>
                                   <div className="flex items-center gap-1">
                                     <Star size={12} fill="#F5A623" className="text-aiko-orange" />
                                     <span className="text-[10px] font-black text-aiko-navy/30">{avail.worker.rating || "5.0"}</span>
@@ -2306,7 +2327,25 @@ export default function App() {
                             {req.status === 'completed' ? <CheckCircle2 size={24} /> : <Clock size={24} />}
                           </div>
                           <div>
-                            <h4 className="font-black text-aiko-navy">{req.title}</h4>
+                            <h4 className="font-black text-aiko-navy flex items-center gap-2">
+                              {req.title}
+                              {userRole === 'employer' && req.workerId && (
+                                <span
+                                  onClick={() => handleViewProfile(req.workerId)}
+                                  className="text-[10px] bg-aiko-teal-bg text-aiko-teal px-2 py-0.5 rounded-full cursor-pointer hover:bg-aiko-teal hover:text-white transition-all"
+                                >
+                                  {isRTL ? "عرض العامل" : "View Worker"}
+                                </span>
+                              )}
+                              {userRole === 'worker' && (
+                                <span
+                                  onClick={() => handleViewProfile(req.employerId)}
+                                  className="text-[10px] bg-aiko-navy/5 text-aiko-navy/40 px-2 py-0.5 rounded-full cursor-pointer hover:bg-aiko-navy hover:text-white transition-all"
+                                >
+                                  {isRTL ? "صاحب الطلب" : "Employer"}
+                                </span>
+                              )}
+                            </h4>
                             <div className="flex items-center gap-2">
                               <p className="text-xs font-bold text-aiko-navy/40">{isRTL ? (req.status === 'open' ? 'مفتوح' : req.status === 'assigned' ? 'تم التعيين' : 'مكتمل') : req.status}</p>
                               {userRole === 'employer' && req.status === 'open' && (
@@ -2379,12 +2418,20 @@ export default function App() {
                             onClick={() => handleOpenChat(conv.otherUser)}
                             className="flex items-center gap-4 p-4 hover:bg-white rounded-2xl cursor-pointer transition-colors group"
                           >
-                            <div className="w-14 h-14 bg-aiko-gray-100 rounded-full overflow-hidden border-2 border-transparent group-hover:border-aiko-teal transition-all">
+                            <div
+                              onClick={(e) => { e.stopPropagation(); handleViewProfile(conv.otherUser.id); }}
+                              className="w-14 h-14 bg-aiko-gray-100 rounded-full overflow-hidden border-2 border-transparent hover:border-aiko-teal transition-all cursor-pointer"
+                            >
                               <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${conv.otherUser.name}`} alt="" />
                             </div>
                             <div className="flex-1">
                               <div className="flex items-center justify-between mb-1">
-                                <h4 className="font-black text-aiko-navy">{conv.otherUser.name}</h4>
+                                <h4
+                                  onClick={(e) => { e.stopPropagation(); handleViewProfile(conv.otherUser.id); }}
+                                  className="font-black text-aiko-navy hover:text-aiko-teal transition-colors cursor-pointer"
+                                >
+                                  {conv.otherUser.name}
+                                </h4>
                                 <span className="text-[10px] font-bold text-aiko-navy/30">
                                   {new Date(conv.lastMessage.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                                 </span>
@@ -2421,10 +2468,13 @@ export default function App() {
                         >
                           <ArrowLeft size={20} className={isRTL ? "rotate-180" : ""} />
                         </button>
-                        <div className="flex items-center gap-3">
-                          <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${activeChatUser.name}`} className="w-10 h-10 rounded-full bg-aiko-gray-100" alt="" />
+                        <div
+                          onClick={() => handleViewProfile(activeChatUser.id)}
+                          className="flex items-center gap-3 cursor-pointer group"
+                        >
+                          <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${activeChatUser.name}`} className="w-10 h-10 rounded-full bg-aiko-gray-100 group-hover:ring-2 group-hover:ring-aiko-teal transition-all" alt="" />
                           <div>
-                            <h4 className="font-black text-aiko-navy leading-none">{activeChatUser.name}</h4>
+                            <h4 className="font-black text-aiko-navy leading-none group-hover:text-aiko-teal transition-colors">{activeChatUser.name}</h4>
                             <span className="text-[10px] font-bold text-aiko-teal uppercase tracking-widest">{activeChatUser.role}</span>
                           </div>
                         </div>
@@ -3102,6 +3152,93 @@ export default function App() {
                         {isRTL ? "إرسال التقييم" : "Submit Review"}
                       </button>
                     </div>
+                  </motion.div>
+                </div>
+              )}
+            </AnimatePresence>
+
+            {/* User Profile Modal */}
+            <AnimatePresence>
+              {showUserProfileModal && viewedUser && (
+                <div className="fixed inset-0 z-[300] flex items-center justify-center p-6">
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    onClick={() => setShowUserProfileModal(false)}
+                    className="absolute inset-0 bg-aiko-navy/60 backdrop-blur-md"
+                  />
+                  <motion.div
+                    initial={{ scale: 0.9, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    exit={{ scale: 0.9, opacity: 0 }}
+                    className="relative w-full max-w-sm bg-white rounded-[40px] p-8 shadow-2xl space-y-6 max-h-[90vh] overflow-y-auto no-scrollbar"
+                  >
+                    <button
+                      onClick={() => setShowUserProfileModal(false)}
+                      className="absolute top-6 right-6 p-2 bg-aiko-gray-100 rounded-xl text-aiko-navy/40 hover:text-aiko-navy transition-all"
+                    >
+                      <X size={20} />
+                    </button>
+
+                    <div className="flex flex-col items-center text-center space-y-4">
+                      <div className="w-24 h-24 bg-aiko-teal-bg rounded-[2.5rem] flex items-center justify-center p-1 border-4 border-white shadow-xl overflow-hidden">
+                        <img
+                          src={viewedUser.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${viewedUser.name}`}
+                          className="w-full h-full object-cover rounded-[2rem]"
+                          alt=""
+                        />
+                      </div>
+                      <div>
+                        <h3 className="text-2xl font-black text-aiko-navy">{viewedUser.name}</h3>
+                        <div className="flex items-center justify-center gap-2 text-aiko-teal font-black text-sm">
+                          <MapPin size={16} />
+                          <span>{viewedUser.location || (isRTL ? 'الجزائر العاصمة' : 'Algiers')}</span>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-1.5">
+                        {[1,2,3,4,5].map(i => (
+                          <Star
+                            key={i}
+                            size={18}
+                            fill={i <= Math.round(viewedUser.rating || 5) ? "#F5A623" : "none"}
+                            className={i <= Math.round(viewedUser.rating || 5) ? "text-aiko-orange" : "text-aiko-navy/10"}
+                          />
+                        ))}
+                        <span className="text-xs font-black text-aiko-navy/30 ml-2">({viewedUser.rating?.toFixed(1) || "5.0"})</span>
+                      </div>
+                    </div>
+
+                    <div className="space-y-4">
+                      <div className="space-y-2">
+                        <SectionTitle title={isRTL ? "نبذة" : "Bio"} />
+                        <p className="text-sm font-bold text-aiko-navy/60 leading-relaxed bg-aiko-gray-50 p-4 rounded-2xl">
+                          {viewedUser.bio || (isRTL ? "لا يوجد وصف حالياً" : "No bio provided")}
+                        </p>
+                      </div>
+
+                      {viewedUser.skills && viewedUser.skills.length > 0 && (
+                        <div className="space-y-2">
+                          <SectionTitle title={isRTL ? "المهارات" : "Skills"} />
+                          <div className="flex flex-wrap gap-2">
+                            {viewedUser.skills.map((skill: string) => (
+                              <span key={skill} className="px-3 py-1 bg-aiko-teal-bg text-aiko-teal-dark rounded-full text-[10px] font-black uppercase tracking-widest border border-aiko-teal/10">
+                                {skill}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    <button
+                      onClick={() => handleOpenChat(viewedUser)}
+                      className="w-full py-5 rounded-[2rem] bg-aiko-teal text-white font-black text-sm uppercase tracking-widest hover:bg-aiko-teal-dark transition-all shadow-xl shadow-aiko-teal/20 flex items-center justify-center gap-3"
+                    >
+                      <MessageCircle size={20} />
+                      {isRTL ? "تواصل معه" : "Contact Him"}
+                    </button>
                   </motion.div>
                 </div>
               )}
