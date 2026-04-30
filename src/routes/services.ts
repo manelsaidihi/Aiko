@@ -206,6 +206,11 @@ router.patch('/:id/assign', authenticateRequest, async (req: AuthRequest, res: R
       data: {
         status: 'assigned',
         workerId: userId
+      },
+      include: {
+        worker: {
+          select: { name: true }
+        }
       }
     });
 
@@ -218,7 +223,7 @@ router.patch('/:id/assign', authenticateRequest, async (req: AuthRequest, res: R
       userId: service.employerId,
       type: 'request_assigned',
       title: 'تم قبول طلبك!',
-      body: `قام أحد العمال بقبول طلبك: ${service.title}`,
+      body: `العامل ${updatedService.worker?.name} قبل طلبك ${service.title}`,
       data: { requestId: service.id, workerId: userId }
     });
 
