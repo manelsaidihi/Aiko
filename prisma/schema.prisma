@@ -29,6 +29,9 @@ model User {
   reviewsGiven    Review[]         @relation("EmployerReviews")
   notifications   Notification[]
   availability    WorkerAvailability?
+  applications    JobApplication[] @relation("WorkerApplications")
+  offersReceived  ServiceOffer[]   @relation("WorkerOffers")
+  offersSent      ServiceOffer[]   @relation("EmployerOffers")
 }
 
 model WorkerAvailability {
@@ -45,6 +48,7 @@ model WorkerAvailability {
   createdAt     DateTime @default(now())
 
   worker        User     @relation(fields: [workerId], references: [id])
+  offers        ServiceOffer[]
 }
 
 model Notification {
@@ -77,6 +81,36 @@ model ServiceRequest {
   employer    User     @relation("EmployerRequests", fields: [employerId], references: [id])
   worker      User?    @relation("WorkerTasks", fields: [workerId], references: [id])
   review      Review?
+  applications JobApplication[]
+  offers       ServiceOffer[]
+}
+
+model JobApplication {
+  id          String   @id @default(uuid())
+  requestId   String
+  workerId    String
+  price       String
+  description String
+  status      String   @default("pending") // "pending", "accepted", "rejected"
+  createdAt   DateTime @default(now())
+
+  request ServiceRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  worker  User           @relation("WorkerApplications", fields: [workerId], references: [id], onDelete: Cascade)
+}
+
+model ServiceOffer {
+  id             String   @id @default(uuid())
+  employerId     String
+  workerId       String
+  availabilityId String
+  requestId      String?
+  status         String   @default("pending") // "pending", "accepted", "rejected"
+  createdAt      DateTime @default(now())
+
+  employer     User                @relation("EmployerOffers", fields: [employerId], references: [id], onDelete: Cascade)
+  worker       User                @relation("WorkerOffers", fields: [workerId], references: [id], onDelete: Cascade)
+  availability WorkerAvailability @relation(fields: [availabilityId], references: [id], onDelete: Cascade)
+  request      ServiceRequest?    @relation(fields: [requestId], references: [id], onDelete: SetNull)
 }
 
 model Message {
