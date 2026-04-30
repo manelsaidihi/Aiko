@@ -1094,6 +1094,7 @@ export default function App() {
   };
 
   const handleOpenChat = (user: any) => {
+    setChatMessages([]);
     setActiveChatUser(user);
     setActiveTab('chat');
     fetchChatHistory(user.id);
@@ -2411,7 +2412,11 @@ export default function App() {
                     <div className="flex flex-col h-[70vh]">
                       <div className="flex items-center gap-4 mb-6">
                         <button
-                          onClick={() => setActiveChatUser(null)}
+                          onClick={() => {
+                            setActiveChatUser(null);
+                            setChatSearchQuery('');
+                            fetchConversations();
+                          }}
                           className="w-10 h-10 rounded-xl bg-aiko-gray-100 flex items-center justify-center text-aiko-navy"
                         >
                           <ArrowLeft size={20} className={isRTL ? "rotate-180" : ""} />
