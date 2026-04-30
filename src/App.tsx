@@ -796,6 +796,9 @@ export default function App() {
   const [jobs, setJobs] = useState<any[]>([]);
   const [showFilters, setShowFilters] = useState(false);
   const [showAvailabilityModal, setShowAvailabilityModal] = useState(false);
+  const [showAvailabilityPreview, setShowAvailabilityPreview] = useState(false);
+  const [showInstantRequestsModal, setShowInstantRequestsModal] = useState(false);
+  const [activeInstantRequests, setActiveInstantRequests] = useState<any[]>([]);
   const [showWorkerAvailabilityForm, setShowWorkerAvailabilityForm] = useState(false);
   const [showDeleteAccountModal, setShowDeleteAccountModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -834,6 +837,7 @@ export default function App() {
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [showPostJobModal, setShowPostJobModal] = useState(false);
   const [isEditingService, setIsEditingService] = useState(false);
+  const [isInstantRequest, setIsInstantRequest] = useState(false);
   const [editingServiceId, setEditingServiceId] = useState<string | null>(null);
   const [serviceData, setServiceData] = useState({
     title: '',
@@ -953,6 +957,28 @@ export default function App() {
     }
   };
 
+  const fetchActiveInstantRequests = async () => {
+    try {
+      const token = authService.getToken();
+      const params = new URLSearchParams();
+      if (workerAvailability?.wilayas?.length > 0) {
+        params.append('wilaya', workerAvailability.wilayas[0]);
+      }
+      if (workerAvailability?.category) {
+        params.append('category', workerAvailability.category);
+      }
+      const response = await fetch(`/api/services/instant/active?${params.toString()}`, {
+        headers: { "Authorization": `Bearer ${token}` }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setActiveInstantRequests(data);
+      }
+    } catch (err) {
+      console.error("Error fetching instant requests:", err);
+    }
+  };
+
   const fetchMyRequests = async () => {
     try {
       const token = authService.getToken();
@@ -1015,8 +1041,13 @@ export default function App() {
 
   const handleCreateService = async () => {
     try {
-      const url = isEditingService ? `/api/services/${editingServiceId}` : "/api/services";
-      const method = isEditingService ? "PUT" : "POST";
+      let url = isEditingService ? `/api/services/${editingServiceId}` : "/api/services";
+      let method = isEditingService ? "PUT" : "POST";
+
+      if (isInstantRequest) {
+        url = "/api/services/instant";
+        method = "POST";
+      }
 
       const response = await fetch(url, {
         method: method,
@@ -1030,6 +1061,7 @@ export default function App() {
         showToast(isRTL ? "تمت العملية بنجاح" : "Service request processed successfully");
         setShowPostJobModal(false);
         setIsEditingService(false);
+        setIsInstantRequest(false);
         setEditingServiceId(null);
         setServiceData({ title: '', description: '', category: '', location: '', budget: '', wilaya: '' });
         fetchMyRequests();
@@ -1140,6 +1172,36 @@ export default function App() {
       }
     } catch (err) {
       console.error("Error submitting review:", err);
+    }
+  };
+
+  const handleUpdateAvailability = async () => {
+    try {
+      const token = authService.getToken();
+      const response = await fetch("/api/availability", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          category: workerSettings.selectedCategory,
+          subcategories: workerSettings.skills,
+          wilayas: workerAvailability?.wilayas || [], // Fallback
+          title: workerAvailability?.title || "Professional",
+          description: workerAvailability?.description || "Ready to work",
+          hourlyRate: parseFloat(workerSettings.price),
+          dailyRate: null
+        })
+      });
+
+      if (response.ok) {
+        setIsAvailable(true);
+        setShowAvailabilityModal(false);
+        showToast(isRTL ? "تم تحديث التوفر بنجاح" : "Availability updated successfully");
+      }
+    } catch (err) {
+      console.error("Error updating availability:", err);
     }
   };
 
@@ -1284,13 +1346,21 @@ export default function App() {
     };
   }, [socket, activeChatUser]);
 
-  const [workerSettings, setWorkerSettings] = useState({
-    type: 'now',
-    price: '1500',
-    instantRequests: true,
-    selectedCategory: 'home_repair',
-    skills: ['hr_0']
+  const [workerSettings, setWorkerSettings] = useState(() => {
+    const cached = localStorage.getItem('aiko_worker_settings');
+    return cached ? JSON.parse(cached) : {
+      type: 'now',
+      price: '1500',
+      startTime: '08:00',
+      endTime: '17:00',
+      selectedCategory: 'home_repair',
+      skills: ['hr_0']
+    };
   });
+
+  useEffect(() => {
+    localStorage.setItem('aiko_worker_settings', JSON.stringify(workerSettings));
+  }, [workerSettings]);
   const [filters, setFilters] = useState({
     time: 'now',
     distance: '2km',
@@ -2079,18 +2149,18 @@ export default function App() {
                               <span>{isRTL ? "أنا متاح للعمل" : "I'm available for work"}</span>
                             </button>
                             {[
-                              { icon: Zap, label: t.available_now, color: 'text-aiko-orange' },
-                              { icon: Calendar, label: t.pending, color: 'text-blue-400' },
-                              { icon: Sun, label: t.part_time, color: 'text-yellow-400' },
-                              { icon: Briefcase, label: t.full_time, color: 'text-white' }
-                            ].map((filter, idx) => (
+                              { icon: Zap, label: t.available_now, color: 'text-aiko-orange', action: toggleAvailability },
+                              { icon: Zap, label: isRTL ? 'طلب فوري' : 'Instant Request', color: 'text-aiko-orange', action: () => { fetchActiveInstantRequests(); setShowInstantRequestsModal(true); } },
+                              { icon: Sun, label: t.part_time, color: 'text-yellow-400', action: () => setShowAvailabilityModal(true) },
+                              { icon: Briefcase, label: t.full_time, color: 'text-white', action: () => setShowAvailabilityModal(true) }
+                            ].map((btn, idx) => (
                               <button 
                                 key={idx} 
-                                onClick={() => setCategory('all')}
+                                onClick={btn.action}
                                 className="bg-white/20 backdrop-blur-md px-4 py-2 rounded-xl text-xs font-black whitespace-nowrap hover:bg-white/30 transition-all flex items-center gap-2 group"
                               >
-                                <filter.icon size={14} className={`${filter.color} group-hover:scale-110 transition-transform`} />
-                                <span>{filter.label}</span>
+                                <btn.icon size={14} className={`${btn.color} group-hover:scale-110 transition-transform`} />
+                                <span>{btn.label}</span>
                               </button>
                             ))}
                           </div>
@@ -2149,12 +2219,23 @@ export default function App() {
                           <p className="text-white/80 font-bold text-sm">{isRTL ? "انشر وظيفة أو أرسل عرضاً مؤقتاً مباشرة" : "Post a job or send an instant offer directly"}</p>
                           
                           <div className="flex gap-3 pt-4">
-                            <button className="flex-1 bg-white/20 backdrop-blur-md border border-white/30 text-white font-black uppercase tracking-widest text-[10px] py-4 rounded-2xl flex items-center justify-center gap-2 hover:bg-white/30 transition-all">
+                            <button
+                              onClick={() => {
+                                setIsInstantRequest(true);
+                                setIsEditingService(false);
+                                setShowPostJobModal(true);
+                              }}
+                              className="flex-1 bg-white/20 backdrop-blur-md border border-white/30 text-white font-black uppercase tracking-widest text-[10px] py-4 rounded-2xl flex items-center justify-center gap-2 hover:bg-white/30 transition-all"
+                            >
                                <Zap size={14} fill="currentColor" />
                                {isRTL ? "طلب فوري" : "Instant Request"}
                             </button>
                             <button
-                              onClick={() => setShowPostJobModal(true)}
+                              onClick={() => {
+                                setIsInstantRequest(false);
+                                setIsEditingService(false);
+                                setShowPostJobModal(true);
+                              }}
                               className="flex-1 bg-white text-[#D4891A] font-black uppercase tracking-widest text-[10px] py-4 rounded-2xl flex items-center justify-center gap-2 shadow-xl hover:scale-105 transition-all"
                             >
                                <Bell size={14} fill="currentColor" />
@@ -2164,23 +2245,6 @@ export default function App() {
                         </div>
                       </div>
 
-                      <div className="flex items-center justify-between bg-white p-5 rounded-[2.5rem] border-2 border-aiko-gray-100 shadow-sm">
-                        <div className="space-y-1">
-                           <h4 className="text-sm font-black text-aiko-navy flex items-center gap-2">
-                              {isRTL ? "الطلبات المؤقتة مفعلة" : "Instant Requests Enabled"}
-                              <Clock size={20} />
-                           </h4>
-                           <p className="text-[10px] font-bold text-aiko-navy/30">{isRTL ? "العمال لديهم 5 دقائق للرد على طلباتك" : "Workers have 5 mins to respond to your requests"}</p>
-                        </div>
-                        <div 
-                          className={`w-14 h-8 rounded-full relative p-1 cursor-pointer transition-colors duration-500 bg-aiko-orangeShadow bg-aiko-orange overflow-hidden border-2 border-white shadow-inner`}
-                        >
-                           <motion.div 
-                              animate={{ x: isRTL ? 0 : 24 }}
-                              className="w-5 h-5 bg-white rounded-full shadow-lg"
-                           />
-                        </div>
-                      </div>
 
                       <div className="space-y-4">
                         <div className="relative mb-6">
@@ -3123,13 +3187,17 @@ export default function App() {
                       <h2 className="text-2xl font-black text-aiko-navy">
                         {isEditingService
                           ? (isRTL ? "تعديل طلب الخدمة" : "Edit Service Request")
-                          : (isRTL ? "نشر طلب خدمة" : "Post Service Request")
+                          : (isInstantRequest
+                             ? (isRTL ? "نشر طلب فوري" : "Post Instant Request")
+                             : (isRTL ? "نشر طلب خدمة" : "Post Service Request")
+                            )
                         }
                       </h2>
                       <button
                         onClick={() => {
                           setShowPostJobModal(false);
                           setIsEditingService(false);
+                          setIsInstantRequest(false);
                           setEditingServiceId(null);
                           setServiceData({ title: '', description: '', category: '', location: '', budget: '', wilaya: '' });
                         }}
@@ -3198,9 +3266,76 @@ export default function App() {
                     >
                       {isEditingService
                         ? (isRTL ? "حفظ التعديلات" : "Save Changes")
-                        : (isRTL ? "نشر الطلب" : "Post Request")
+                        : (isInstantRequest
+                           ? (isRTL ? "نشر الطلب الفوري" : "Post Instant Request")
+                           : (isRTL ? "نشر الطلب" : "Post Request")
+                          )
                       }
                     </button>
+                  </motion.div>
+                </div>
+              )}
+            </AnimatePresence>
+
+            {/* Instant Requests Modal */}
+            <AnimatePresence>
+              {showInstantRequestsModal && (
+                <div className="fixed inset-0 z-[300] flex items-center justify-center p-6">
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    onClick={() => setShowInstantRequestsModal(false)}
+                    className="absolute inset-0 bg-aiko-navy/60 backdrop-blur-md"
+                  />
+                  <motion.div
+                    initial={{ scale: 0.9, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    exit={{ scale: 0.9, opacity: 0 }}
+                    className="relative w-full max-w-lg bg-white rounded-[40px] p-8 shadow-2xl flex flex-col gap-6 max-h-[90vh] overflow-y-auto no-scrollbar"
+                  >
+                    <div className="flex items-center justify-between">
+                      <h2 className="text-2xl font-black text-aiko-navy">{isRTL ? "الطلبات الفورية النشطة" : "Active Instant Requests"}</h2>
+                      <button onClick={() => setShowInstantRequestsModal(false)} className="p-2 bg-aiko-gray-100 rounded-xl text-aiko-navy/40 hover:text-aiko-navy transition-all"><X size={20} /></button>
+                    </div>
+
+                    <div className="space-y-4">
+                      {activeInstantRequests.map(req => (
+                        <div key={req.id} className="bento-card p-6 flex items-center justify-between group hover:border-aiko-teal transition-all">
+                          <div>
+                            <h4 className="font-black text-aiko-navy">{req.title}</h4>
+                            <p className="text-xs font-bold text-aiko-navy/30">{req.employer.name} · {req.wilaya}</p>
+                          </div>
+                          <button
+                            onClick={async () => {
+                              try {
+                                const response = await fetch(`/api/services/${req.id}/assign`, {
+                                  method: 'PATCH',
+                                  headers: { "Authorization": `Bearer ${authService.getToken()}` }
+                                });
+                                if (response.ok) {
+                                  showToast(isRTL ? "تم قبول الطلب بنجاح" : "Request accepted successfully");
+                                  setShowInstantRequestsModal(false);
+                                  fetchMyRequests();
+                                  setActiveTab('activity');
+                                }
+                              } catch (err) {
+                                console.error("Error accepting instant request:", err);
+                              }
+                            }}
+                            className="bg-aiko-teal text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-aiko-teal-dark transition-all"
+                          >
+                            {isRTL ? "قبول" : "Accept"}
+                          </button>
+                        </div>
+                      ))}
+                      {activeInstantRequests.length === 0 && (
+                        <div className="text-center py-10 text-aiko-navy/20">
+                          <Zap size={48} className="mx-auto mb-4 opacity-10" />
+                          <p className="font-bold">{isRTL ? "لا توجد طلبات فورية حالياً" : "No active instant requests"}</p>
+                        </div>
+                      )}
+                    </div>
                   </motion.div>
                 </div>
               )}
@@ -3445,6 +3580,32 @@ export default function App() {
                   </div>
                 </div>
 
+                {/* Start/End Time Validation */}
+                <div className="grid grid-cols-2 gap-6">
+                  <div className="space-y-3">
+                    <h4 className="text-xs font-black uppercase text-aiko-navy/40 text-center tracking-widest font-mono">
+                      {isRTL ? 'بداية الدوام' : 'Start Time'}
+                    </h4>
+                    <input
+                      type="time"
+                      value={workerSettings.startTime}
+                      onChange={(e) => setWorkerSettings({...workerSettings, startTime: e.target.value})}
+                      className="w-full bg-aiko-gray-100 p-4 rounded-2xl border-2 border-transparent focus:border-aiko-teal bg-white transition-all outline-none font-black text-center"
+                    />
+                  </div>
+                  <div className="space-y-3">
+                    <h4 className="text-xs font-black uppercase text-aiko-navy/40 text-center tracking-widest font-mono">
+                      {isRTL ? 'نهاية الدوام' : 'End Time'}
+                    </h4>
+                    <input
+                      type="time"
+                      value={workerSettings.endTime}
+                      onChange={(e) => setWorkerSettings({...workerSettings, endTime: e.target.value})}
+                      className="w-full bg-aiko-gray-100 p-4 rounded-2xl border-2 border-transparent focus:border-aiko-teal bg-white transition-all outline-none font-black text-center"
+                    />
+                  </div>
+                </div>
+
                 {/* Hourly Rate / Budget */}
                 <div className="space-y-5">
                   <h4 className="text-xs font-black uppercase text-aiko-navy/40 text-center tracking-widest font-mono">
@@ -3459,30 +3620,6 @@ export default function App() {
                   />
                 </div>
 
-                {/* Instant Requests Toggle */}
-                <div className="flex items-center justify-between bg-aiko-gray-50 p-6 rounded-[2rem] border border-aiko-gray-100">
-                  <div className="space-y-1">
-                    <h4 className="text-sm font-black text-aiko-navy flex items-center gap-2">
-                       {isRTL ? 'طلبات مؤقتة (5 دقائق للرد)' : 'Instant Requests (5min limit)'}
-                       <Clock size={20} />
-                    </h4>
-                    <div className="flex items-center gap-2">
-                      <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
-                      <p className="text-[10px] font-bold text-aiko-navy/40">
-                        {workerSettings.instantRequests ? (isRTL ? "مفعل: الرد السريع مطلوب" : "Enabled: Quick response required") : (isRTL ? "معطل" : "Disabled")}
-                      </p>
-                    </div>
-                  </div>
-                  <button 
-                    onClick={() => setWorkerSettings({...workerSettings, instantRequests: !workerSettings.instantRequests})}
-                    className={`w-14 h-8 rounded-full relative transition-colors duration-300 ${workerSettings.instantRequests ? 'bg-aiko-teal' : 'bg-aiko-gray-300'}`}
-                  >
-                    <motion.div 
-                      animate={{ x: workerSettings.instantRequests ? 24 : 4 }}
-                      className="absolute top-1 left-0 w-6 h-6 bg-white rounded-full shadow-md"
-                    />
-                  </button>
-                </div>
 
                 {/* Categories & Skills Selection */}
                 <div className="space-y-8">
@@ -3529,12 +3666,31 @@ export default function App() {
                   </div>
                 </div>
 
+                {/* Preview Section */}
+                <div className="bg-aiko-gray-50 p-6 rounded-3xl border-2 border-dashed border-aiko-teal/20">
+                   <h4 className="text-[10px] font-black uppercase text-aiko-teal tracking-widest mb-4">{isRTL ? "معاينة التوفر" : "Availability Preview"}</h4>
+                   <div className="space-y-2">
+                      <p className="text-sm font-bold text-aiko-navy">
+                        {isRTL ? "النوع:" : "Type:"} <span className="text-aiko-teal">{workerSettings.type}</span>
+                      </p>
+                      <p className="text-sm font-bold text-aiko-navy">
+                        {isRTL ? "السعر:" : "Price:"} <span className="text-aiko-teal">{workerSettings.price} DA</span>
+                      </p>
+                      <p className="text-sm font-bold text-aiko-navy">
+                        {isRTL ? "الوقت:" : "Time:"} <span className="text-aiko-teal">{workerSettings.startTime} - {workerSettings.endTime}</span>
+                      </p>
+                   </div>
+                </div>
+
                 {/* Action Buttons */}
                 <div className="space-y-3 pt-6">
                   <button 
                     onClick={() => {
-                      setIsAvailable(true);
-                      setShowAvailabilityModal(false);
+                      if (workerSettings.startTime >= workerSettings.endTime) {
+                        showToast(isRTL ? "وقت النهاية يجب أن يكون بعد وقت البداية" : "End time must be after start time", "error");
+                        return;
+                      }
+                      handleUpdateAvailability();
                     }}
                     className="bg-aiko-teal text-white w-full py-6 rounded-[2.5rem] font-black text-lg shadow-2xl shadow-aiko-teal/30 active:scale-95 transition-all flex items-center justify-center gap-3"
                   >
