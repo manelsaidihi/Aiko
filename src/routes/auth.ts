@@ -39,7 +39,15 @@ router.post('/register', registerValidation, async (req, res) => {
       user: {
         id: user.id,
         name: user.name,
-        role: user.role
+        email: user.email,
+        role: user.role,
+        phone: user.phone,
+        location: user.location,
+        bio: user.bio,
+        avatar: user.avatar,
+        portfolio: user.portfolio,
+        rating: user.rating,
+        createdAt: user.createdAt
       }
     });
   } catch (error) {
@@ -74,7 +82,15 @@ router.post('/login', loginValidation, async (req, res) => {
       user: {
         id: user.id,
         name: user.name,
-        role: user.role
+        email: user.email,
+        role: user.role,
+        phone: user.phone,
+        location: user.location,
+        bio: user.bio,
+        avatar: user.avatar,
+        portfolio: user.portfolio,
+        rating: user.rating,
+        createdAt: user.createdAt
       }
     });
   } catch (error) {
