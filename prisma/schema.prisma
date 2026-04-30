@@ -21,6 +21,13 @@ model User {
   rating          Float?
   createdAt       DateTime         @default(now())
 
+  // Security & Verification
+  emailVerified         Boolean   @default(false)
+  verificationToken     String?   @unique
+  verificationExpires   DateTime?
+  resetPasswordToken    String?   @unique
+  resetPasswordExpires DateTime?
+
   serviceRequests ServiceRequest[] @relation("EmployerRequests")
   assignedTasks   ServiceRequest[] @relation("WorkerTasks")
   sentMessages    Message[]        @relation("SentMessages")

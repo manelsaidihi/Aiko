@@ -745,7 +745,7 @@ export default function App() {
   const [lang, setLang] = useState<Language>('ar');
   const [currentView, setCurrentView] = useState<'lang' | 'onboard' | 'auth' | 'role' | 'dashboard'>('lang');
   const [userRole, setUserRole] = useState<UserRole | null>(null);
-  const [authMode, setAuthMode] = useState<'login' | 'signup'>('login');
+  const [authMode, setAuthMode] = useState<'login' | 'signup' | 'forgot' | 'reset'>('login');
   const [phoneNumber, setPhoneNumber] = useState('');
   const [fullName, setFullName] = useState('');
   const [password, setPassword] = useState('');
@@ -1529,13 +1529,83 @@ export default function App() {
     document.documentElement.lang = l;
     setLang(l);
     
-    // Simulating requested behavior
-    if ((window as any).langFromProfile) {
+    // Check for email verification or reset token in URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const verifyToken = urlParams.get('token');
+    const path = window.location.pathname;
+
+    if (path === '/verify-email' && verifyToken) {
+      handleVerifyEmail(verifyToken);
+    } else if (path === '/reset-password' && verifyToken) {
+      setAuthMode('reset');
+      setCurrentView('auth');
+    } else if ((window as any).langFromProfile) {
       setCurrentView('dashboard');
       setActiveTab('profile');
       (window as any).langFromProfile = false;
     } else {
       setCurrentView('onboard');
+    }
+  };
+
+  const handleVerifyEmail = async (token: string) => {
+    try {
+      const res = await fetch(`/api/auth/verify-email/${token}`);
+      const data = await res.json();
+      if (res.ok) {
+        showToast(isRTL ? "تم تفعيل الحساب بنجاح، يمكنك الدخول الآن" : "Account verified successfully, you can now log in");
+        setAuthMode('login');
+        setCurrentView('auth');
+      } else {
+        showToast(data.error || "Verification failed", "error");
+      }
+    } catch (err) {
+      showToast("Verification error", "error");
+    }
+  };
+
+  const handleForgotPassword = async () => {
+    setIsAuthLoading(true);
+    try {
+      const res = await fetch('/api/auth/forgot-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email })
+      });
+      const data = await res.json();
+      showToast(isRTL ? "تم إرسال رابط إعادة التعيين لبريدك" : "Reset link sent to your email");
+      setAuthMode('login');
+    } catch (err) {
+      showToast("Error sending reset link", "error");
+    } finally {
+      setIsAuthLoading(false);
+    }
+  };
+
+  const handleResetPassword = async () => {
+    if (password !== confirmPassword) {
+      showToast(isRTL ? 'كلمات المرور غير متطابقة' : 'Passwords do not match', 'error');
+      return;
+    }
+    const token = new URLSearchParams(window.location.search).get('token');
+    setIsAuthLoading(true);
+    try {
+      const res = await fetch('/api/auth/reset-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token, newPassword: password })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        showToast(isRTL ? "تم تغيير كلمة المرور بنجاح" : "Password reset successful");
+        setAuthMode('login');
+      } else {
+        showToast(data.error || "Reset failed", "error");
+      }
+    } catch (err) {
+      showToast("Reset error", "error");
+    } finally {
+      setIsAuthLoading(false);
     }
   };
 
@@ -1595,13 +1665,12 @@ export default function App() {
         role: userRole || 'worker',
         location: wilaya && commune ? `${wilaya}, ${commune}` : undefined
       });
-      setCurrentUser(data.user);
-      setUserRole(data.user.role);
-      initSocket(data.token, data.user.id);
-      setCurrentView('dashboard');
-      showToast(isRTL ? 'تم إنشاء الحساب بنجاح' : 'Registration successful');
+
+      showToast(isRTL ? 'تم إنشاء الحساب بنجاح، يرجى تفعيل البريد الإلكتروني' : 'Account created. Please verify your email.');
+      setAuthMode('login');
+      setCurrentView('auth');
     } catch (err: any) {
-      showToast(t.register_error, 'error');
+      showToast(err.message || t.register_error, 'error');
     } finally {
       setIsAuthLoading(false);
     }
@@ -1920,11 +1989,17 @@ export default function App() {
               
               <div className="text-center space-y-2">
                 <h2 className="text-3xl font-black text-aiko-navy leading-tight">
-                  {authMode === 'login' ? (isRTL ? 'مرحباً بعودتك إلى' : 'Welcome back to') : (isRTL ? 'إنشاء حسابك' : 'Create your account')}
+                  {authMode === 'login' ? (isRTL ? 'مرحباً بعودتك إلى' : 'Welcome back to') :
+                   authMode === 'signup' ? (isRTL ? 'إنشاء حسابك' : 'Create your account') :
+                   authMode === 'forgot' ? (isRTL ? 'استعادة كلمة المرور' : 'Reset Password') :
+                   (isRTL ? 'كلمة مرور جديدة' : 'New Password')}
                   {authMode === 'login' && <><br/><span className="text-aiko-teal">Aiko</span></>}
                 </h2>
                 <p className="text-aiko-navy/40 font-bold">
-                  {authMode === 'login' ? (isRTL ? 'اعثر على مساعدة محلية في دقائق' : 'Find local help in minutes') : (isRTL ? 'الأمر يستغرق دقيقة واحدة فقط' : 'It only takes a minute')}
+                  {authMode === 'login' ? (isRTL ? 'اعثر على مساعدة محلية في دقائق' : 'Find local help in minutes') :
+                   authMode === 'signup' ? (isRTL ? 'الأمر يستغرق دقيقة واحدة فقط' : 'It only takes a minute') :
+                   authMode === 'forgot' ? (isRTL ? 'أدخل بريدك الإلكتروني لتلقي رابط الاستعادة' : 'Enter your email to receive reset link') :
+                   (isRTL ? 'قم بتعيين كلمة مرور قوية جديدة' : 'Set a new strong password')}
                 </p>
               </div>
 
@@ -1942,41 +2017,45 @@ export default function App() {
                   />
                 )}
 
-                <FormInput
-                  label={t.email_label}
-                  icon={Mail}
-                  type="email"
-                  placeholder="name@example.com"
-                  value={email}
-                  onChange={setEmail}
-                  i18nLabel="email_label"
-                  isRTL={isRTL}
-                />
+                {(authMode !== 'reset') && (
+                  <FormInput
+                    label={t.email_label}
+                    icon={Mail}
+                    type="email"
+                    placeholder="name@example.com"
+                    value={email}
+                    onChange={setEmail}
+                    i18nLabel="email_label"
+                    isRTL={isRTL}
+                  />
+                )}
 
-                <FormInput 
-                  label={t.password_label} 
-                  icon={Lock} 
-                  showPasswordToggle
-                  placeholder="••••••••" 
-                  value={password}
-                  onChange={setPassword}
-                  i18nLabel="password_label"
-                  isRTL={isRTL}
-                />
+                {(authMode !== 'forgot') && (
+                  <FormInput
+                    label={authMode === 'reset' ? (isRTL ? "كلمة المرور الجديدة" : "New Password") : t.password_label}
+                    icon={Lock}
+                    showPasswordToggle
+                    placeholder="••••••••"
+                    value={password}
+                    onChange={setPassword}
+                    i18nLabel={authMode === 'reset' ? undefined : "password_label"}
+                    isRTL={isRTL}
+                  />
+                )}
 
-                {authMode === 'signup' && (
+                {(authMode === 'signup' || authMode === 'reset') && (
                   <>
                     <p className="text-[10px] font-bold text-aiko-navy/30 px-2" data-i18n="password_hint">
                       {t.password_hint}
                     </p>
                     <FormInput 
-                      label={t.password_confirm_label} 
+                      label={authMode === 'reset' ? (isRTL ? "تأكيد كلمة المرور" : "Confirm New Password") : t.password_confirm_label}
                       icon={Lock} 
                       showPasswordToggle
                       placeholder="••••••••" 
                       value={confirmPassword}
                       onChange={setConfirmPassword}
-                      i18nLabel="password_confirm_label"
+                      i18nLabel={authMode === 'reset' ? undefined : "password_confirm_label"}
                       isRTL={isRTL}
                     />
                     
@@ -2004,7 +2083,12 @@ export default function App() {
                 )}
 
                 <button 
-                  onClick={authMode === 'login' ? handleLogin : () => setCurrentView('role')}
+                  onClick={
+                    authMode === 'login' ? handleLogin :
+                    authMode === 'signup' ? () => setCurrentView('role') :
+                    authMode === 'forgot' ? handleForgotPassword :
+                    handleResetPassword
+                  }
                   disabled={isAuthLoading}
                   className="btn-primary w-full py-5 rounded-2xl shadow-xl shadow-aiko-teal/20 mt-4 flex items-center justify-center gap-3"
                 >
@@ -2015,8 +2099,22 @@ export default function App() {
                       className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full"
                     />
                   )}
-                  {authMode === 'login' ? (isRTL ? 'تسجيل الدخول' : 'Login') : (isRTL ? 'التالي' : 'Next')}
+                  {authMode === 'login' ? (isRTL ? 'تسجيل الدخول' : 'Login') :
+                   authMode === 'signup' ? (isRTL ? 'التالي' : 'Next') :
+                   authMode === 'forgot' ? (isRTL ? 'إرسال الرابط' : 'Send Link') :
+                   (isRTL ? 'تحديث كلمة المرور' : 'Update Password')}
                 </button>
+
+                {authMode === 'login' && (
+                  <div className="text-center">
+                    <button
+                      onClick={() => setAuthMode('forgot')}
+                      className="text-xs font-bold text-aiko-navy/30 hover:text-aiko-teal transition-colors"
+                    >
+                      {isRTL ? "نسيت كلمة المرور؟" : "Forgot Password?"}
+                    </button>
+                  </div>
+                )}
 
                 {authMode === 'login' && (
                   <>
@@ -2042,7 +2140,8 @@ export default function App() {
 
               <div className="text-center pt-2">
                 <p className="text-sm font-bold text-aiko-navy/40">
-                  {authMode === 'login' ? (isRTL ? 'ليس لديك حساب؟' : "Don't have an account?") : (isRTL ? 'لديك حساب بالفعل؟' : 'Already have an account?')}{' '}
+                  {authMode === 'login' ? (isRTL ? 'ليس لديك حساب؟' : "Don't have an account?") :
+                   (isRTL ? 'لديك حساب بالفعل؟' : 'Already have an account?')}{' '}
                   <button 
                     onClick={() => setAuthMode(authMode === 'login' ? 'signup' : 'login')}
                     className="text-aiko-teal hover:underline font-black"

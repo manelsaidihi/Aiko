@@ -43,7 +43,7 @@ async function startServer() {
         defaultSrc: ["'self'"],
         imgSrc: ["'self'", "data:", "https:", "blob:"],
         fontSrc: ["'self'", "https://fonts.googleapis.com", "https://fonts.gstatic.com"],
-        connectSrc: ["'self'", "https:", "wss:"],
+        connectSrc: ["'self'", "https:", "wss:", "ws:"],
         scriptSrc: ["'self'", "'unsafe-inline'"],
         styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
       },
@@ -56,17 +56,21 @@ async function startServer() {
 
   // Rate Limiting
   const globalLimiter = rateLimit({
-    windowMs: (parseInt(process.env.RATE_LIMIT_WINDOW || "15")) * 60 * 1000,
-    max: parseInt(process.env.RATE_LIMIT_MAX || "100"),
-    message: { error: true, message: "Too many requests from this IP, please try again later.", code: 429 }
+    windowMs: 15 * 60 * 1000,
+    max: 200,
+    message: {
+      error: true,
+      message: "طلبات كثيرة جداً، يرجى المحاولة لاحقاً / Trop de requêtes, réessayez plus tard / Too many requests, try again later",
+      code: 429
+    }
   });
 
   const authLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
-    max: 100,
+    max: 20,
     message: {
       error: true,
-      message: "حاولت كثيراً، انتظر 15 دقيقة / Trop de tentatives, attendez 15 minutes / Too many attempts, wait 15 minutes",
+      message: "محاولات كثيرة، انتظر 15 دقيقة / Trop de tentatives, attendez 15 minutes / Too many attempts, wait 15 minutes",
       code: 429
     }
   });
@@ -207,6 +211,15 @@ async function startServer() {
         }
       }
     }));
+
+    // Handle deep links for SPA routes to ensure they serve index.html
+    const spaRoutes = ["/verify-email", "/reset-password"];
+    spaRoutes.forEach(route => {
+      app.get(`${route}*`, (req, res) => {
+        res.sendFile(path.join(publicPath, "index.html"));
+      });
+    });
+
     app.get("*", (req, res) => {
       res.sendFile(path.join(publicPath, "index.html"));
     });
