@@ -1197,7 +1197,11 @@ export default function App() {
   };
 
   const handleOpenChat = (user: any) => {
-    setChatMessages([]);
+    // Keep existing messages if they belong to the same user to avoid flicker,
+    // but clear them if switching users.
+    if (!activeChatUser || activeChatUser.id !== user.id) {
+      setChatMessages([]);
+    }
     setActiveChatUser(user);
     setActiveTab('chat');
     setShowUserProfileModal(false);
@@ -2794,6 +2798,7 @@ export default function App() {
                             setActiveChatUser(null);
                             setSearchQuery('');
                             fetchConversations();
+                            setChatMessages([]);
                           }}
                           className="w-10 h-10 rounded-xl bg-aiko-gray-100 flex items-center justify-center text-aiko-navy"
                         >
@@ -3348,8 +3353,19 @@ export default function App() {
 
                               if (notif.type === 'new_message' && notif.data?.senderId) {
                                 setShowNotification(false);
-                                setActiveTab('chat');
-                                handleOpenChat({ id: notif.data.senderId, name: 'User' }); // Minimal mock
+                                // Fetch full user data before opening chat
+                                fetch(`/api/auth/user/${notif.data.senderId}`, {
+                                  headers: { "Authorization": `Bearer ${authService.getToken()}` }
+                                })
+                                .then(res => res.json())
+                                .then(userData => {
+                                  if (userData && !userData.error) {
+                                    handleOpenChat(userData);
+                                  } else {
+                                    handleOpenChat({ id: notif.data.senderId, name: 'User' });
+                                  }
+                                })
+                                .catch(() => handleOpenChat({ id: notif.data.senderId, name: 'User' }));
                               } else if (notif.type === 'new_request' || notif.type === 'request_assigned' || notif.type === 'request_completed') {
                                 setShowNotification(false);
                                 if (notif.data?.requestId) {
