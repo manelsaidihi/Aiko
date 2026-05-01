@@ -744,6 +744,8 @@ export default function App() {
   const [wilaya, setWilaya] = useState('');
   const [commune, setCommune] = useState('');
   const [activeTab, setActiveTab] = useState('feed');
+  const [activeActivityTab, setActiveActivityTab] = useState<'applications' | 'offers'>('applications');
+  const [activeJobTab, setActiveJobTab] = useState<Record<string, 'details' | 'applicants'>>({});
   const [category, setCategory] = useState('all');
   const [conversations, setConversations] = useState<any[]>([]);
   const [activeChatUser, setActiveChatUser] = useState<any>(null);
@@ -977,7 +979,7 @@ export default function App() {
 
   const fetchApplicants = async (requestId: string) => {
     try {
-      const response = await fetch(`${API_URL}/api/services/${requestId}/applicants`, {
+      const response = await fetch(`${API_URL}/api/applications/job/${requestId}`, {
         headers: { "Authorization": `Bearer ${authService.getToken()}` }
       });
       if (response.ok) {
@@ -1035,6 +1037,23 @@ export default function App() {
     }
   };
 
+  const handleDeleteApplication = async (applicationId: string) => {
+    try {
+      const response = await fetch(`${API_URL}/api/applications/${applicationId}`, {
+        method: 'DELETE',
+        headers: {
+          "Authorization": `Bearer ${authService.getToken()}`
+        }
+      });
+      if (response.ok) {
+        showToast(isRTL ? "تم حذف الطلب بنجاح" : "Application deleted successfully");
+        fetchMyApplications();
+      }
+    } catch (err) {
+      console.error("Error deleting application:", err);
+    }
+  };
+
   const handleUpdateOfferStatus = async (offerId: string, status: string) => {
     try {
       const response = await fetch(`${API_URL}/api/offers/${offerId}/${status}`, {
@@ -1064,7 +1083,7 @@ export default function App() {
         body: JSON.stringify({ serviceRequestId })
       });
       if (response.ok) {
-        showToast(isRTL ? "تم تقديم طلبك بنجاح" : "Application submitted successfully");
+        showToast(isRTL ? "تم إرسال طلبك بنجاح" : "Application submitted successfully");
         fetchMyApplications();
       } else {
         const err = await response.json();
@@ -1085,7 +1104,9 @@ export default function App() {
         },
         body: JSON.stringify({
           availabilityId: activeItem.id,
-          ...offerData
+          price: offerData.price,
+          timing: offerData.timing,
+          message: offerData.message
         })
       });
       if (response.ok) {
@@ -2644,11 +2665,30 @@ export default function App() {
                   animate={{ opacity: 1, x: 0 }}
                   className="h-full overflow-y-auto p-2 space-y-2 no-scrollbar"
                 >
-                  <SectionTitle title={userRole === 'worker' ? t.nav_requests : t.nav_myjobs} i18nTitleKey={userRole === 'worker' ? "nav_requests" : "nav_myjobs"} />
+                  <div className="flex gap-2 mb-4">
+                    {userRole === 'worker' ? (
+                      <>
+                        <button
+                          onClick={() => setActiveActivityTab('applications')}
+                          className={`flex-1 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${activeActivityTab === 'applications' ? 'bg-aiko-teal text-white shadow-lg' : 'bg-white text-aiko-navy/40'}`}
+                        >
+                          {isRTL ? "طلبات التقديم" : "Applications"}
+                        </button>
+                        <button
+                          onClick={() => setActiveActivityTab('offers')}
+                          className={`flex-1 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${activeActivityTab === 'offers' ? 'bg-aiko-teal text-white shadow-lg' : 'bg-white text-aiko-navy/40'}`}
+                        >
+                          {isRTL ? "العروض الواردة" : "Incoming Offers"}
+                        </button>
+                      </>
+                    ) : (
+                      <SectionTitle title={t.nav_myjobs} i18nTitleKey="nav_myjobs" />
+                    )}
+                  </div>
+
                   <div className="space-y-2">
-                    {userRole === 'worker' && incomingOffers.length > 0 && (
+                    {userRole === 'worker' && activeActivityTab === 'offers' && (
                       <div className="space-y-2 mb-8">
-                        <SectionTitle title={isRTL ? "العروض الواردة" : "Incoming Offers"} />
                         {incomingOffers.map(offer => (
                           <div key={offer.id} className="bento-card p-2 border-l-4 border-aiko-teal flex flex-col gap-2">
                             <div className="flex items-center justify-between">
@@ -2668,38 +2708,59 @@ export default function App() {
                             </div>
                             {offer.status === 'pending' ? (
                               <div className="flex gap-2">
-                                <button onClick={() => handleUpdateOfferStatus(offer.id, 'accept')} className="flex-1 bg-aiko-teal text-white py-2 rounded-xl text-[10px] font-black uppercase tracking-widest">{isRTL ? "قبول" : "Accept"}</button>
-                                <button onClick={() => handleUpdateOfferStatus(offer.id, 'reject')} className="flex-1 bg-aiko-gray-100 text-aiko-navy/40 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest">{isRTL ? "رفض" : "Reject"}</button>
+                               <button onClick={() => handleUpdateOfferStatus(offer.id, 'accept')} className="flex-1 bg-green-500 text-white py-2 rounded-xl text-[10px] font-black uppercase tracking-widest">{isRTL ? "قبول" : "Accept"}</button>
+                               <button onClick={() => handleUpdateOfferStatus(offer.id, 'reject')} className="flex-1 bg-red-500 text-white py-2 rounded-xl text-[10px] font-black uppercase tracking-widest">{isRTL ? "رفض" : "Reject"}</button>
                               </div>
                             ) : (
-                              <div className="text-center py-1 bg-aiko-gray-50 rounded-lg text-[10px] font-black uppercase tracking-widest text-aiko-navy/30">
+                              <div className={`text-center py-1 rounded-lg text-[10px] font-black uppercase tracking-widest ${offer.status === 'accepted' ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'}`}>
                                 {offer.status}
                               </div>
                             )}
                           </div>
                         ))}
+                        {incomingOffers.length === 0 && (
+                          <div className="text-center py-10 text-aiko-navy/20">
+                            <Zap size={48} className="mx-auto mb-2 opacity-10" />
+                            <p className="font-bold">{isRTL ? "لا توجد عروض حالياً" : "No offers yet"}</p>
+                          </div>
+                        )}
                       </div>
                     )}
 
-                    {userRole === 'worker' && myApplications.length > 0 && (
+                    {userRole === 'worker' && activeActivityTab === 'applications' && (
                       <div className="space-y-2 mb-8">
-                        <SectionTitle title={isRTL ? "طلبات التقديم" : "My Applications"} />
                         {myApplications.map(app => (
-                          <div key={app.id} className="bento-card p-2 border-l-4 border-aiko-orange flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                              <div className="w-10 h-10 bg-aiko-gray-100 rounded-full overflow-hidden">
-                                <img src={app.request.employer.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${app.request.employer.name}`} />
+                          <div key={app.id} className="bento-card p-2 border-l-4 border-aiko-orange flex flex-col gap-2">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 bg-aiko-gray-100 rounded-full overflow-hidden">
+                                  <img src={app.serviceRequest.employer.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${app.serviceRequest.employer.name}`} />
+                                </div>
+                                <div>
+                                  <h4 className="font-black text-aiko-navy">{app.serviceRequest.title}</h4>
+                                  <p className="text-[10px] font-bold text-aiko-navy/40">{app.serviceRequest.employer.name}</p>
+                                </div>
                               </div>
-                              <div>
-                                <h4 className="font-black text-aiko-navy">{app.request.title}</h4>
-                                <p className="text-[10px] font-bold text-aiko-navy/40">{app.request.employer.name}</p>
+                              <div className={`text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full ${app.status === 'accepted' ? 'bg-green-100 text-green-600' : app.status === 'rejected' ? 'bg-red-100 text-red-600' : 'bg-yellow-100 text-yellow-600'}`}>
+                                {app.status === 'pending' ? (isRTL ? "قيد الانتظار" : "Pending") : app.status === 'accepted' ? (isRTL ? "مقبول" : "Accepted") : (isRTL ? "مرفوض" : "Rejected")}
                               </div>
                             </div>
-                            <div className={`text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full ${app.status === 'accepted' ? 'bg-green-100 text-green-600' : app.status === 'rejected' ? 'bg-red-100 text-red-600' : 'bg-yellow-100 text-yellow-600'}`}>
-                              {app.status === 'pending' ? (isRTL ? "قيد الانتظار" : "Pending") : app.status === 'accepted' ? (isRTL ? "مقبول" : "Accepted") : (isRTL ? "مرفوض" : "Rejected")}
-                            </div>
+                            {app.status === 'pending' && (
+                              <button
+                                onClick={() => handleDeleteApplication(app.id)}
+                                className="text-[10px] font-black text-red-500 uppercase tracking-widest self-end hover:underline"
+                              >
+                                {isRTL ? "سحب الطلب" : "Cancel Application"}
+                              </button>
+                            )}
                           </div>
                         ))}
+                        {myApplications.length === 0 && (
+                          <div className="text-center py-10 text-aiko-navy/20">
+                            <Briefcase size={48} className="mx-auto mb-2 opacity-10" />
+                            <p className="font-bold">{isRTL ? "لم تتقدم لأي وظيفة بعد" : "No applications yet"}</p>
+                          </div>
+                        )}
                       </div>
                     )}
 
@@ -2707,116 +2768,143 @@ export default function App() {
                     {myRequests.map((req) => (
                       <div key={req.id} className="flex flex-col gap-2">
                         <div className={`bento-card p-2 border-l-4 ${req.status === 'completed' ? 'border-aiko-teal' : 'border-aiko-orange'} flex items-center justify-between`}>
-                        <div className="flex items-center gap-2">
-                          <div className={`p-3 rounded-xl ${req.status === 'completed' ? 'bg-aiko-teal/10 text-aiko-teal' : 'bg-aiko-orange/10 text-aiko-orange'}`}>
-                            {req.status === 'completed' ? <CheckCircle2 size={24} /> : <Clock size={24} />}
-                          </div>
-                          <div>
-                            <h4 className="font-black text-aiko-navy flex items-center gap-2">
-                              {req.title}
-                              {userRole === 'employer' && req.workerId && (
-                                <span
-                                  onClick={() => handleViewProfile(req.workerId)}
-                                  className="text-[10px] bg-aiko-teal-bg text-aiko-teal px-2 py-0.5 rounded-full cursor-pointer hover:bg-aiko-teal hover:text-white transition-all"
-                                >
-                                  {isRTL ? "عرض العامل" : "View Worker"}
-                                </span>
-                              )}
-                              {userRole === 'worker' && (
-                                <span
-                                  onClick={() => handleViewProfile(req.employerId)}
-                                  className="text-[10px] bg-aiko-navy/5 text-aiko-navy/40 px-2 py-0.5 rounded-full cursor-pointer hover:bg-aiko-navy hover:text-white transition-all"
-                                >
-                                  {isRTL ? "صاحب الطلب" : "Employer"}
-                                </span>
-                              )}
-                            </h4>
-                            <div className="flex items-center gap-2">
-                              <p className="text-xs font-bold text-aiko-navy/40">{isRTL ? (req.status === 'open' ? 'مفتوح' : req.status === 'assigned' ? 'تم التعيين' : 'مكتمل') : req.status}</p>
-                              {userRole === 'employer' && req.status === 'open' && (
-                                <div className="flex items-center gap-2 ml-2">
-                                  <button
-                                    onClick={() => {
-                                      setEditingServiceId(req.id);
-                                      setIsEditingService(true);
-                                      setServiceData({
-                                        title: req.title,
-                                        description: req.description,
-                                        category: req.category,
-                                        location: req.location,
-                                        budget: req.budget,
-                                        wilaya: req.wilaya
-                                      });
-                                      setShowPostJobModal(true);
-                                    }}
-                                    className="text-[10px] font-black text-aiko-teal hover:underline"
-                                  >
-                                    {isRTL ? "تعديل" : "Edit"}
-                                  </button>
-                                  <button
-                                    onClick={() => handleDeleteService(req.id)}
-                                    className="text-[10px] font-black text-red-500 hover:underline"
-                                  >
-                                    {isRTL ? "حذف" : "Delete"}
-                                  </button>
-                                </div>
-                              )}
+                          <div className="flex items-center gap-2">
+                            <div className={`p-3 rounded-xl ${req.status === 'completed' ? 'bg-aiko-teal/10 text-aiko-teal' : 'bg-aiko-orange/10 text-aiko-orange'}`}>
+                              {req.status === 'completed' ? <CheckCircle2 size={24} /> : <Clock size={24} />}
                             </div>
-                          </div>
-                        </div>
-                        <div className="flex flex-col items-end gap-2">
-                          <span className="text-sm font-black text-aiko-teal">{req.budget}</span>
-                          {req.status === 'assigned' && (
-                            <button
-                              onClick={() => handleCompleteRequest(req.id, req.workerId)}
-                              className="text-[10px] font-black uppercase tracking-widest bg-aiko-teal text-white px-3 py-1.5 rounded-lg"
-                            >
-                              {isRTL ? "إتمام المهمة" : "Complete Task"}
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                        {userRole === 'employer' && req.status === 'open' && (
-                          <div className="mx-6 mb-2 space-y-3">
-                            <div className="flex items-center justify-between">
-                              <h5 className="text-[10px] font-black uppercase tracking-widest text-aiko-navy/30">{isRTL ? "المتقدمون" : "Applicants"}</h5>
-                              <button onClick={() => fetchApplicants(req.id)} className="text-[10px] font-black text-aiko-teal hover:underline">{isRTL ? "تحديث" : "Refresh"}</button>
-                            </div>
-                            {jobApplicants[req.id]?.map((app: any) => (
-                              <div key={app.id} className="bg-white p-2 rounded-2xl shadow-sm border border-aiko-gray-100 flex flex-col gap-3">
-                                <div className="flex items-center justify-between">
-                                  <div className="flex items-center gap-3">
-                                    <div className="w-8 h-8 rounded-full bg-aiko-gray-100 overflow-hidden">
-                                      <img src={app.worker.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${app.worker.name}`} />
-                                    </div>
-                                    <div>
-                                      <h6 className="text-xs font-black text-aiko-navy">{app.worker.name}</h6>
-                                      <div className="flex items-center gap-1">
-                                        <Star size={8} fill="#F5A623" className="text-aiko-orange" />
-                                        <span className="text-[8px] font-black text-aiko-navy/30">{app.worker.rating || "5.0"}</span>
-                                      </div>
-                                    </div>
-                                  </div>
-                                  <div className="text-right">
-                                    <p className="text-xs font-black text-aiko-teal">{app.price} DA</p>
-                                  </div>
-                                </div>
-                                <p className="text-[10px] font-bold text-aiko-navy/60 leading-relaxed">{app.description}</p>
-                                {app.status === 'pending' ? (
-                                  <div className="flex gap-2">
-                                    <button onClick={() => handleUpdateApplicationStatus(app.id, 'accept', req.id)} className="flex-1 bg-aiko-teal text-white py-2 rounded-xl text-[8px] font-black uppercase tracking-widest">{isRTL ? "قبول" : "Accept"}</button>
-                                    <button onClick={() => handleUpdateApplicationStatus(app.id, 'reject', req.id)} className="flex-1 bg-aiko-gray-100 text-aiko-navy/40 py-2 rounded-xl text-[8px] font-black uppercase tracking-widest">{isRTL ? "رفض" : "Reject"}</button>
-                                  </div>
-                                ) : (
-                                  <div className="text-center py-1 bg-aiko-gray-50 rounded-lg text-[8px] font-black uppercase tracking-widest text-aiko-navy/30">
-                                    {app.status}
+                            <div>
+                              <h4 className="font-black text-aiko-navy flex items-center gap-2">
+                                {req.title}
+                                {userRole === 'employer' && req.workerId && (
+                                  <span
+                                    onClick={() => handleViewProfile(req.workerId)}
+                                    className="text-[10px] bg-aiko-teal-bg text-aiko-teal px-2 py-0.5 rounded-full cursor-pointer hover:bg-aiko-teal hover:text-white transition-all"
+                                  >
+                                    {isRTL ? "عرض العامل" : "View Worker"}
+                                  </span>
+                                )}
+                                {userRole === 'worker' && (
+                                  <span
+                                    onClick={() => handleViewProfile(req.employerId)}
+                                    className="text-[10px] bg-aiko-navy/5 text-aiko-navy/40 px-2 py-0.5 rounded-full cursor-pointer hover:bg-aiko-navy hover:text-white transition-all"
+                                  >
+                                    {isRTL ? "صاحب الطلب" : "Employer"}
+                                  </span>
+                                )}
+                              </h4>
+                              <div className="flex items-center gap-2">
+                                <p className="text-xs font-bold text-aiko-navy/40">{isRTL ? (req.status === 'open' ? 'مفتوح' : req.status === 'assigned' ? 'تم التعيين' : 'مكتمل') : req.status}</p>
+                                {userRole === 'employer' && req.status === 'open' && (
+                                  <div className="flex items-center gap-2 ml-2">
+                                    <button
+                                      onClick={() => {
+                                        setEditingServiceId(req.id);
+                                        setIsEditingService(true);
+                                        setServiceData({
+                                          title: req.title,
+                                          description: req.description,
+                                          category: req.category,
+                                          location: req.location,
+                                          budget: req.budget,
+                                          wilaya: req.wilaya
+                                        });
+                                        setShowPostJobModal(true);
+                                      }}
+                                      className="text-[10px] font-black text-aiko-teal hover:underline"
+                                    >
+                                      {isRTL ? "تعديل" : "Edit"}
+                                    </button>
+                                    <button
+                                      onClick={() => handleDeleteService(req.id)}
+                                      className="text-[10px] font-black text-red-500 hover:underline"
+                                    >
+                                      {isRTL ? "حذف" : "Delete"}
+                                    </button>
                                   </div>
                                 )}
                               </div>
-                            ))}
-                            {(!jobApplicants[req.id] || jobApplicants[req.id].length === 0) && (
-                              <p className="text-[10px] font-bold text-aiko-navy/20 text-center py-2">{isRTL ? "لا يوجد متقدمون بعد" : "No applicants yet"}</p>
+                            </div>
+                          </div>
+                          <div className="flex flex-col items-end gap-2">
+                            <span className="text-sm font-black text-aiko-teal">{req.budget}</span>
+                            {req.status === 'assigned' && (
+                              <button
+                                onClick={() => handleCompleteRequest(req.id, req.workerId)}
+                                className="text-[10px] font-black uppercase tracking-widest bg-aiko-teal text-white px-3 py-1.5 rounded-lg"
+                              >
+                                {isRTL ? "إتمام المهمة" : "Complete Task"}
+                              </button>
                             )}
+                          </div>
+                        </div>
+
+                        {userRole === 'employer' && req.status === 'open' && (
+                          <div className="bg-white rounded-2xl shadow-sm border border-aiko-gray-100 overflow-hidden mx-2 mb-4">
+                            <div className="flex border-b border-aiko-gray-100">
+                              <button
+                                onClick={() => setActiveJobTab(prev => ({ ...prev, [req.id]: 'details' }))}
+                                className={`flex-1 py-2 text-[10px] font-black uppercase tracking-widest ${(!activeJobTab[req.id] || activeJobTab[req.id] === 'details') ? 'bg-aiko-teal text-white' : 'text-aiko-navy/40'}`}
+                              >
+                                {isRTL ? "التفاصيل" : "Details"}
+                              </button>
+                              <button
+                                onClick={() => {
+                                  setActiveJobTab(prev => ({ ...prev, [req.id]: 'applicants' }));
+                                  fetchApplicants(req.id);
+                                }}
+                                className={`flex-1 py-2 text-[10px] font-black uppercase tracking-widest ${activeJobTab[req.id] === 'applicants' ? 'bg-aiko-teal text-white' : 'text-aiko-navy/40'}`}
+                              >
+                                {isRTL ? "المتقدمون" : "Applicants"}
+                              </button>
+                            </div>
+
+                            <div className="p-4">
+                              {(!activeJobTab[req.id] || activeJobTab[req.id] === 'details') ? (
+                                <p className="text-xs font-medium text-aiko-navy/60 leading-relaxed">{req.description}</p>
+                              ) : (
+                                <div className="space-y-3">
+                                  {jobApplicants[req.id]?.map((app: any) => (
+                                    <div key={app.id} className="bg-aiko-gray-50 p-3 rounded-xl flex flex-col gap-3">
+                                      <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-3">
+                                          <img
+                                            src={app.worker.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${app.worker.name}`}
+                                            className="w-10 h-10 rounded-full bg-white border border-aiko-gray-100"
+                                            alt=""
+                                          />
+                                          <div>
+                                            <h6 className="text-xs font-black text-aiko-navy">{app.worker.name}</h6>
+                                            <div className="flex items-center gap-1">
+                                              <Star size={8} fill="#F5A623" className="text-aiko-orange" />
+                                              <span className="text-[8px] font-black text-aiko-navy/30">{app.worker.rating || "5.0"}</span>
+                                            </div>
+                                          </div>
+                                        </div>
+                                        <button
+                                          onClick={() => handleViewProfile(app.worker.id)}
+                                          className="text-[10px] font-black text-aiko-teal border border-aiko-teal/20 px-2 py-1 rounded-lg hover:bg-aiko-teal hover:text-white transition-all"
+                                        >
+                                          {isRTL ? "عرض الملف" : "View Profile"}
+                                        </button>
+                                      </div>
+                                      {app.status === 'pending' ? (
+                                        <div className="flex gap-2">
+                                          <button onClick={() => handleUpdateApplicationStatus(app.id, 'accept', req.id)} className="flex-1 bg-green-500 text-white py-2 rounded-xl text-[10px] font-black uppercase tracking-widest">{isRTL ? "قبول" : "Accept"}</button>
+                                          <button onClick={() => handleUpdateApplicationStatus(app.id, 'reject', req.id)} className="flex-1 bg-red-500 text-white py-2 rounded-xl text-[10px] font-black uppercase tracking-widest">{isRTL ? "رفض" : "Reject"}</button>
+                                        </div>
+                                      ) : (
+                                        <div className={`text-center py-1 rounded-lg text-[10px] font-black uppercase tracking-widest ${app.status === 'accepted' ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'}`}>
+                                          {app.status}
+                                        </div>
+                                      )}
+                                    </div>
+                                  ))}
+                                  {(!jobApplicants[req.id] || jobApplicants[req.id].length === 0) && (
+                                    <p className="text-[10px] font-bold text-aiko-navy/20 text-center py-2">{isRTL ? "لا يوجد متقدمون بعد" : "No applicants yet"}</p>
+                                  )}
+                                </div>
+                              )}
+                            </div>
                           </div>
                         )}
                       </div>
@@ -3360,11 +3448,12 @@ export default function App() {
                               setActiveItem(null);
                             } else {
                               setShowSendOfferModal(true);
+                              setActiveItem(activeItem); // Ensure it's set
                             }
                           }}
                           className="btn-primary w-full py-3 text-sm uppercase tracking-[0.2em]"
                         >
-                          {userRole === 'worker' ? (isRTL ? "تقديم طلب الآن" : "Apply Protocol") : (isRTL ? "إرسال عرض/عقد" : "Send Offer/Contract")}
+                          {userRole === 'worker' ? (isRTL ? "تقدم لهذه الوظيفة" : "Apply for this job") : (isRTL ? "إرسال عرض" : "Send Offer")}
                         </button>
                         <button className="w-full py-2 text-xs font-black text-aiko-navy/30 uppercase tracking-widest hover:text-aiko-navy transition-colors">
                           {isRTL ? "حفظ للمراجعة" : "Save for Review"}

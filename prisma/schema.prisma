@@ -95,30 +95,30 @@ model ServiceRequest {
 }
 
 model JobApplication {
-  id               String   @id @default(uuid())
-  serviceRequestId String
+  id               String   @id @default(cuid())
   workerId         String
-  status           String   @default("pending") // "pending", "accepted", "rejected"
+  serviceRequestId String
+  status           String   @default("pending")
   createdAt        DateTime @default(now())
 
-  request ServiceRequest @relation(fields: [serviceRequestId], references: [id], onDelete: Cascade)
-  worker  User           @relation("WorkerApplications", fields: [workerId], references: [id], onDelete: Cascade)
+  worker           User           @relation("WorkerApplications", fields: [workerId], references: [id], onDelete: Cascade)
+  serviceRequest   ServiceRequest @relation(fields: [serviceRequestId], references: [id], onDelete: Cascade)
 }
 
 model WorkerOffer {
-  id             String   @id @default(uuid())
+  id             String   @id @default(cuid())
   employerId     String
-  workerId       String
   availabilityId String
-  price          String
+  price          Float
   timing         String
   message        String?
-  status         String   @default("pending") // "pending", "accepted", "rejected"
+  status         String   @default("pending")
   createdAt      DateTime @default(now())
 
-  employer     User                @relation("EmployerOffers", fields: [employerId], references: [id], onDelete: Cascade)
-  worker       User                @relation("WorkerOffers", fields: [workerId], references: [id], onDelete: Cascade)
-  availability WorkerAvailability @relation(fields: [availabilityId], references: [id], onDelete: Cascade)
+  employer       User               @relation("EmployerOffers", fields: [employerId], references: [id], onDelete: Cascade)
+  availability   WorkerAvailability @relation(fields: [availabilityId], references: [id], onDelete: Cascade)
+  workerId       String
+  worker         User               @relation("WorkerOffers", fields: [workerId], references: [id], onDelete: Cascade)
 }
 
 model Message {
