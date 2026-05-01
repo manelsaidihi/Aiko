@@ -8,6 +8,26 @@ import { sendVerificationEmail, sendResetPasswordEmail } from '../services/email
 
 const router = Router();
 
+// POST /api/auth/check-email
+router.post('/check-email', async (req, res) => {
+  try {
+    const { email } = req.body;
+    const existingUser = await prisma.user.findUnique({
+      where: { email }
+    });
+
+    if (existingUser) {
+      return res.status(400).json({
+        error: 'هذا البريد مسجل مسبقاً / Cet email est déjà utilisé / This email is already registered'
+      });
+    }
+
+    res.json({ available: true });
+  } catch (error) {
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // POST /api/auth/register
 router.post('/register', registerValidation, async (req, res) => {
   try {

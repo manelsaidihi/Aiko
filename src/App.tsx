@@ -771,6 +771,7 @@ export default function App() {
   const [showUserProfileModal, setShowUserProfileModal] = useState(false);
   const [viewedUser, setViewedUser] = useState<any>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [emailError, setEmailError] = useState('');
   const [toast, setToast] = useState<{ message: string, type: 'success' | 'error' } | null>(null);
   const [isRTL, setIsRTL] = useState(lang === "ar");
 
@@ -1645,11 +1646,46 @@ export default function App() {
     }
   };
 
-  const handleRegister = async () => {
+  const handleSignupNext = async () => {
+    if (!email || !email.includes('@')) {
+      setEmailError(isRTL ? 'الرجاء إدخال بريد إلكتروني صحيح' : 'Please enter a valid email');
+      return;
+    }
+    if (!fullName) {
+      showToast(isRTL ? 'الرجاء إدخال الاسم الكامل' : 'Please enter full name', 'error');
+      return;
+    }
+    if (password.length < 8) {
+      showToast(isRTL ? 'كلمة المرور يجب أن تكون 8 أحرف على الأقل' : 'Password must be at least 8 characters', 'error');
+      return;
+    }
     if (password !== confirmPassword) {
       showToast(isRTL ? 'كلمات المرور غير متطابقة' : 'Passwords do not match', 'error');
       return;
     }
+
+    setIsAuthLoading(true);
+    setEmailError('');
+    try {
+      const response = await fetch('/api/auth/check-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email })
+      });
+      const data = await response.json();
+      if (response.ok) {
+        setCurrentView('role');
+      } else {
+        setEmailError(data.error);
+      }
+    } catch (err) {
+      showToast('Connection error', 'error');
+    } finally {
+      setIsAuthLoading(false);
+    }
+  };
+
+  const handleRegister = async () => {
     setIsAuthLoading(true);
     try {
       const data = await authService.register({
@@ -1660,9 +1696,11 @@ export default function App() {
         location: wilaya && commune ? `${wilaya}, ${commune}` : undefined
       });
 
-      showToast(isRTL ? 'تم إنشاء الحساب بنجاح، يرجى تفعيل البريد الإلكتروني' : 'Account created. Please verify your email.');
-      setAuthMode('login');
-      setCurrentView('auth');
+      setCurrentUser(data.user);
+      setUserRole(data.user.role);
+      initSocket(data.token, data.user.id);
+      setCurrentView('dashboard');
+      showToast(isRTL ? 'تم إنشاء الحساب والدخول بنجاح' : 'Account created and logged in successfully');
     } catch (err: any) {
       showToast(err.message || t.register_error, 'error');
     } finally {
@@ -2012,16 +2050,21 @@ export default function App() {
                 )}
 
                 {(authMode !== 'reset') && (
-                  <FormInput
-                    label={t.email_label}
-                    icon={Mail}
-                    type="email"
-                    placeholder="name@example.com"
-                    value={email}
-                    onChange={setEmail}
-                    i18nLabel="email_label"
-                    isRTL={isRTL}
-                  />
+                  <div className="space-y-1">
+                    <FormInput
+                      label={t.email_label}
+                      icon={Mail}
+                      type="email"
+                      placeholder="name@example.com"
+                      value={email}
+                      onChange={(val: string) => { setEmail(val); setEmailError(''); }}
+                      i18nLabel="email_label"
+                      isRTL={isRTL}
+                    />
+                    {authMode === 'signup' && emailError && (
+                      <p className="text-[10px] font-bold text-red-500 px-2 animate-pulse">{emailError}</p>
+                    )}
+                  </div>
                 )}
 
                 {(authMode !== 'forgot') && (
@@ -2079,7 +2122,7 @@ export default function App() {
                 <button 
                   onClick={
                     authMode === 'login' ? handleLogin :
-                    authMode === 'signup' ? () => setCurrentView('role') :
+                    authMode === 'signup' ? handleSignupNext :
                     authMode === 'forgot' ? handleForgotPassword :
                     handleResetPassword
                   }
