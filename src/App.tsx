@@ -780,6 +780,7 @@ export default function App() {
   const [showDeleteAccountModal, setShowDeleteAccountModal] = useState(false);
   const [showUserProfileModal, setShowUserProfileModal] = useState(false);
   const [viewedUser, setViewedUser] = useState<any>(null);
+  const [viewedUserReviews, setViewedUserReviews] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [emailError, setEmailError] = useState('');
   const [toast, setToast] = useState<{ message: string, type: 'success' | 'error' } | null>(null);
@@ -803,9 +804,13 @@ export default function App() {
     email: "",
     phone: "",
     bio: "",
+    wilaya: "",
+    municipality: "",
     location: "",
     avatar: "",
-    portfolio: [] as string[]
+    portfolio: [] as string[],
+    completedTasks: 0,
+    rating: 0
   });
 
   const [workerReviewsData, setWorkerReviewsData] = useState<{reviews: any[], averageRating: number, totalReviews: number}>({
@@ -833,6 +838,49 @@ export default function App() {
     rating: 5,
     comment: ''
   });
+
+  const handleAddPortfolioImage = async (base64: string) => {
+    try {
+      const response = await fetch(`${API_URL}/api/auth/portfolio`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${authService.getToken()}`
+        },
+        body: JSON.stringify({ image: base64 })
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setCurrentUser((prev: any) => ({ ...prev, portfolio: data.portfolio }));
+        setProfileData((prev: any) => ({ ...prev, portfolio: data.portfolio }));
+        showToast(isRTL ? "تمت إضافة الصورة بنجاح" : "Image added successfully");
+      } else {
+        const err = await response.json();
+        showToast(err.error || "Failed to add image", "error");
+      }
+    } catch (err) {
+      console.error("Error adding portfolio image:", err);
+    }
+  };
+
+  const handleDeletePortfolioImage = async (index: number) => {
+    try {
+      const response = await fetch(`${API_URL}/api/auth/portfolio/${index}`, {
+        method: "DELETE",
+        headers: {
+          "Authorization": `Bearer ${authService.getToken()}`
+        }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setCurrentUser((prev: any) => ({ ...prev, portfolio: data.portfolio }));
+        setProfileData((prev: any) => ({ ...prev, portfolio: data.portfolio }));
+        showToast(isRTL ? "تم حذف الصورة بنجاح" : "Image deleted successfully");
+      }
+    } catch (err) {
+      console.error("Error deleting portfolio image:", err);
+    }
+  };
 
   const [myRequests, setMyRequests] = useState<any[]>([]);
   const [incomingOffers, setIncomingOffers] = useState<any[]>([]);
@@ -1271,12 +1319,33 @@ export default function App() {
 
   const handleViewProfile = async (userId: string) => {
     try {
-      const response = await fetch(`${API_URL}/api/auth/user/${userId}`, {
+      // If viewing self, switch to profile tab
+      if (userId === currentUser?.id) {
+        setActiveTab('profile');
+        setShowUserProfileModal(false);
+        return;
+      }
+
+      const response = await fetch(`${API_URL}/api/auth/profile/${userId}`, {
         headers: { "Authorization": `Bearer ${authService.getToken()}` }
       });
       if (response.ok) {
         const data = await response.json();
         setViewedUser(data);
+
+        // Fetch reviews for the viewed user if they are a worker
+        if (data.role === 'worker') {
+          const revRes = await fetch(`${API_URL}/api/reviews/worker/${userId}`);
+          if (revRes.ok) {
+            const revData = await revRes.json();
+            setViewedUserReviews(revData.reviews);
+          } else {
+            setViewedUserReviews([]);
+          }
+        } else {
+          setViewedUserReviews([]);
+        }
+
         setShowUserProfileModal(true);
         // Close other overlays for better UX
         setActiveItem(null);
@@ -1306,6 +1375,8 @@ export default function App() {
   const handleOpenItem = (item: any) => {
     setActiveItem(item);
   };
+
+  const [selectedPortfolioImage, setSelectedPortfolioImage] = useState<string | null>(null);
 
   const handleReviewUser = async (targetUserId: string, rating: number, comment: string) => {
     if (!currentUser) return;
@@ -1365,15 +1436,54 @@ export default function App() {
   const handleUpdateProfile = async (overrideData?: any) => {
     try {
       const dataToUpdate = overrideData || {
-        ...profileData,
-        location: (wilaya && commune) ? `${wilaya}, ${commune}` : profileData.location
+        name: profileData.name,
+        phone: profileData.phone,
+        bio: profileData.bio,
+        wilaya: wilaya,
+        municipality: commune
       };
-      const updated = await authService.updateProfile(dataToUpdate);
-      setCurrentUser((prev: any) => ({ ...prev, ...updated }));
-      setIsEditingProfile(false);
-      showToast(isRTL ? "تم تحديث الملف الشخصي بنجاح" : "Profile updated successfully");
+
+      const response = await fetch(`${API_URL}/api/auth/profile`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${authService.getToken()}`
+        },
+        body: JSON.stringify(dataToUpdate)
+      });
+
+      if (response.ok) {
+        const updated = await response.json();
+        setCurrentUser((prev: any) => ({ ...prev, ...updated }));
+        setIsEditingProfile(false);
+        showToast(isRTL ? "تم تحديث الملف الشخصي بنجاح" : "Profile updated successfully");
+      } else {
+        const err = await response.json();
+        throw new Error(err.error || "Failed to update profile");
+      }
     } catch (err: any) {
       showToast(err.message || (isRTL ? "فشل تحديث الملف الشخصي" : "Failed to update profile"), "error");
+    }
+  };
+
+  const handleUpdateAvatar = async (base64: string) => {
+    try {
+      const response = await fetch(`${API_URL}/api/auth/avatar`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${authService.getToken()}`
+        },
+        body: JSON.stringify({ avatar: base64 })
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setCurrentUser((prev: any) => ({ ...prev, avatar: data.avatar }));
+        setProfileData((prev: any) => ({ ...prev, avatar: data.avatar }));
+        showToast(isRTL ? "تم تحديث صورة الملف الشخصي" : "Avatar updated successfully");
+      }
+    } catch (err) {
+      console.error("Error updating avatar:", err);
     }
   };
 
@@ -1405,17 +1515,17 @@ export default function App() {
         email: currentUser.email || "",
         phone: currentUser.phone || "",
         bio: currentUser.bio || "",
+        wilaya: currentUser.wilaya || "",
+        municipality: currentUser.municipality || "",
         location: currentUser.location || "",
         avatar: currentUser.avatar || "",
-        portfolio: currentUser.portfolio || []
+        portfolio: currentUser.portfolio || [],
+        completedTasks: currentUser.completedTasks || 0,
+        rating: currentUser.rating || 0
       });
 
-      // Parse location into wilaya and commune
-      if (currentUser.location && currentUser.location.includes(',')) {
-        const [w, c] = currentUser.location.split(',').map((s: string) => s.trim());
-        if (w) setWilaya(w);
-        if (c) setCommune(c);
-      }
+      if (currentUser.wilaya) setWilaya(currentUser.wilaya);
+      if (currentUser.municipality) setCommune(currentUser.municipality);
 
       if (currentUser.role === 'worker') {
         fetchWorkerReviews(currentUser.id);
@@ -3054,32 +3164,22 @@ export default function App() {
                   animate={{ opacity: 1, y: 0 }}
                   className="h-full overflow-y-auto p-2 space-y-2 no-scrollbar"
                 >
-                  {isEditingProfile ? (
-                    <div className="space-y-3 pb-20">
-                      <div className="flex items-center gap-2 mb-2">
-                        <button 
-                          onClick={() => setIsEditingProfile(false)}
-                          className="w-12 h-12 rounded-2xl bg-aiko-gray-100 flex items-center justify-center text-aiko-navy hover:bg-aiko-teal-bg hover:text-aiko-teal transition-all active:scale-95"
-                        >
-                          <ArrowLeft size={24} className={isRTL ? 'rotate-180' : ''} />
-                        </button>
-                        <h2 className="text-2xl font-black text-aiko-navy">{isRTL ? 'تعديل الملف' : 'Edit Profile'}</h2>
-                      </div>
-
-                      <div className="flex flex-col items-center gap-2 py-2">
-                        <div className="relative group">
-                          <div className="w-32 h-32 bg-aiko-teal-bg rounded-[3rem] overflow-hidden border-4 border-white shadow-xl flex items-center justify-center text-aiko-teal">
-                            <img 
-                              src={profileData.avatar || `https://images.unsplash.com/photo-${userRole === 'worker' ? '1507003211169-0a1dd7228f2d' : '1438761681033-6461ffad8d80'}?w=200&h=200&fit=crop`}
-                              className="w-full h-full object-cover" 
-                              alt="Profile" 
-                            />
-                            <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                              <Camera className="text-white" size={32} />
-                            </div>
+                  <div className="space-y-4 pb-20">
+                    {/* Section 1: Personal Info */}
+                    <div className="bento-card p-6 text-center relative overflow-hidden group">
+                      <div className="flex justify-center mb-4">
+                        <div className="relative group cursor-pointer">
+                          <div className="w-32 h-32 bg-aiko-teal-bg rounded-full flex items-center justify-center border-4 border-white shadow-xl overflow-hidden">
+                            {profileData.avatar ? (
+                              <img src={profileData.avatar} className="w-full h-full object-cover" alt="Profile" />
+                            ) : (
+                              <span className="text-5xl font-black text-aiko-teal">
+                                {profileData.name?.charAt(0).toUpperCase()}
+                              </span>
+                            )}
                           </div>
-                          <label className="absolute bottom-1 right-1 w-10 h-10 bg-aiko-orange text-white rounded-2xl border-4 border-white shadow-lg flex items-center justify-center hover:scale-110 transition-transform cursor-pointer">
-                            <Camera size={20} />
+                          <label className="absolute bottom-1 right-1 w-10 h-10 bg-aiko-orange text-white rounded-full border-4 border-white shadow-lg flex items-center justify-center hover:scale-110 transition-transform cursor-pointer">
+                            <Settings2 size={20} />
                             <input
                               type="file"
                               className="hidden"
@@ -3089,7 +3189,7 @@ export default function App() {
                                 if (file) {
                                   const reader = new FileReader();
                                   reader.onloadend = () => {
-                                    setProfileData({...profileData, avatar: reader.result as string});
+                                    handleUpdateAvatar(reader.result as string);
                                   };
                                   reader.readAsDataURL(file);
                                 }
@@ -3097,227 +3197,248 @@ export default function App() {
                             />
                           </label>
                         </div>
-                        <p className="text-[10px] font-black text-aiko-navy/30 uppercase tracking-widest">{isRTL ? 'تغيير الصورة' : 'Change Photo'}</p>
                       </div>
 
                       <div className="space-y-2">
-                        <FormInput 
-                          label={isRTL ? "الاسم الكامل" : "Full Name"} 
-                          icon={UserIcon} 
-                          value={profileData.name} 
-                          onChange={(val: string) => setProfileData({...profileData, name: val})}
-                        />
-                        <FormInput
-                          label={isRTL ? "البريد الإلكتروني" : "Email"}
-                          icon={Mail}
-                          value={profileData.email}
-                          onChange={(val: string) => setProfileData({...profileData, email: val})}
-                        />
-                        <FormInput
-                          label={isRTL ? "رقم الهاتف" : "Phone Number"}
-                          icon={Phone}
-                          value={profileData.phone}
-                          onChange={(val: string) => setProfileData({...profileData, phone: val})}
-                        />
-                        <div className="space-y-2">
-                          <label className="text-[10px] font-black uppercase tracking-widest text-aiko-navy/40 px-6 block">
-                            {isRTL ? "الوصف الشخصي" : "Bio"}
-                          </label>
-                          <textarea 
-                            className="w-full bg-aiko-gray-50 rounded-[2rem] p-2 text-sm font-bold text-aiko-navy focus:outline-none focus:ring-4 focus:ring-aiko-teal/5 min-h-[140px] resize-none border-2 border-transparent focus:border-aiko-teal/20 transition-all"
-                            value={profileData.bio}
-                            onChange={(e: any) => setProfileData({...profileData, bio: e.target.value})}
-                          />
-                        </div>
-                        <div className="grid grid-cols-2 gap-2">
-                          <FormSelect
-                            label={t.wilaya_label}
-                            icon={MapPin}
-                            options={ALGERIA_WILAYAS}
-                            value={wilaya}
-                            onChange={(val: string) => { setWilaya(val); setCommune(''); }}
-                            i18nLabel="wilaya_label"
-                            isRTL={isRTL}
-                          />
-                          <FormSelect
-                            label={t.commune_label}
-                            icon={MapPin}
-                            options={wilaya ? (ALGERIA_LOCATIONS[wilaya] || []) : []}
-                            value={commune}
-                            onChange={setCommune}
-                            i18nLabel="commune_label"
-                            isRTL={isRTL}
-                          />
-                        </div>
-                      </div>
-
-                      <div className="flex gap-2 pt-4 pb-20">
-                         <button 
-                          onClick={() => setIsEditingProfile(false)}
-                          className="flex-1 py-3 rounded-[2rem] bg-aiko-gray-100 text-aiko-navy font-black text-sm uppercase tracking-widest hover:bg-aiko-gray-200 transition-all"
-                        >
-                          {isRTL ? "إلغاء" : "Cancel"}
-                        </button>
-                        <button 
-                          onClick={handleUpdateProfile}
-                          className="flex-[2] py-3 rounded-[2rem] bg-aiko-teal text-white font-black text-sm uppercase tracking-widest hover:bg-aiko-teal-dark transition-all shadow-xl shadow-aiko-teal/20"
-                        >
-                          {isRTL ? "حفظ التغييرات" : "Save Changes"}
-                        </button>
+                        {isEditingProfile ? (
+                          <div className="space-y-4">
+                            <FormInput
+                              label={isRTL ? "الاسم الكامل" : "Full Name"}
+                              icon={UserIcon}
+                              value={profileData.name}
+                              onChange={(val: string) => setProfileData({ ...profileData, name: val })}
+                            />
+                            <div className="bg-aiko-gray-50 p-3 rounded-2xl text-left">
+                              <label className="text-[10px] font-black uppercase text-aiko-navy/40 px-2 block">{isRTL ? "البريد الإلكتروني" : "Email"}</label>
+                              <p className="text-sm font-bold text-aiko-navy px-2">{profileData.email}</p>
+                            </div>
+                            <FormInput
+                              label={isRTL ? "رقم الهاتف" : "Phone Number"}
+                              icon={Phone}
+                              value={profileData.phone}
+                              onChange={(val: string) => setProfileData({ ...profileData, phone: val })}
+                            />
+                            <div className="grid grid-cols-2 gap-2">
+                              <FormSelect
+                                label={t.wilaya_label}
+                                icon={MapPin}
+                                options={ALGERIA_WILAYAS}
+                                value={wilaya}
+                                onChange={(val: string) => { setWilaya(val); setCommune(''); }}
+                                isRTL={isRTL}
+                              />
+                              <FormSelect
+                                label={t.commune_label}
+                                icon={MapPin}
+                                options={wilaya ? (ALGERIA_LOCATIONS[wilaya] || []) : []}
+                                value={commune}
+                                onChange={setCommune}
+                                isRTL={isRTL}
+                              />
+                            </div>
+                            <div className="flex gap-2">
+                              <button
+                                onClick={() => {
+                                  setIsEditingProfile(false);
+                                  setProfileData(prev => ({
+                                    ...prev,
+                                    name: currentUser?.name || "",
+                                    phone: currentUser?.phone || ""
+                                  }));
+                                  setWilaya(currentUser?.wilaya || "");
+                                  setCommune(currentUser?.municipality || "");
+                                }}
+                                className="flex-1 py-3 rounded-2xl bg-aiko-gray-100 text-aiko-navy font-black text-sm uppercase"
+                              >
+                                {isRTL ? "إلغاء" : "Cancel"}
+                              </button>
+                              <button
+                                onClick={() => handleUpdateProfile()}
+                                className="flex-1 py-3 rounded-2xl bg-aiko-teal text-white font-black text-sm uppercase shadow-lg shadow-aiko-teal/20"
+                              >
+                                {isRTL ? "حفظ" : "Save"}
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <>
+                            <div className="flex items-center justify-center gap-2">
+                              <h3 className="text-2xl font-black text-aiko-navy">{profileData.name}</h3>
+                              <button onClick={() => setIsEditingProfile(true)} className="text-aiko-teal hover:text-aiko-orange transition-colors">
+                                <Settings2 size={18} />
+                              </button>
+                            </div>
+                            <div className="flex items-center justify-center gap-2 text-aiko-navy/40 font-bold text-sm">
+                              <MapPin size={16} />
+                              <span>{profileData.wilaya} {profileData.municipality ? `· ${profileData.municipality}` : ''}</span>
+                            </div>
+                            <div className="flex justify-center gap-6 pt-4">
+                              <div className="text-center">
+                                <p className="text-xl font-black text-aiko-navy">{profileData.rating?.toFixed(1) || "5.0"}</p>
+                                <div className="flex gap-0.5 justify-center text-aiko-orange">
+                                  {[...Array(5)].map((_, i) => (
+                                    <Star key={i} size={12} fill={i < Math.round(profileData.rating || 5) ? "currentColor" : "none"} />
+                                  ))}
+                                </div>
+                                <p className="text-[10px] font-black uppercase text-aiko-navy/30 mt-1">{isRTL ? "التقييم" : "Rating"}</p>
+                              </div>
+                              {userRole === 'worker' && (
+                                <div className="text-center">
+                                  <p className="text-xl font-black text-aiko-navy">{profileData.completedTasks}</p>
+                                  <div className="flex justify-center text-aiko-teal">
+                                    <CheckCircle2 size={12} />
+                                  </div>
+                                  <p className="text-[10px] font-black uppercase text-aiko-navy/30 mt-1">{isRTL ? "المهام" : "Tasks"}</p>
+                                </div>
+                              )}
+                            </div>
+                          </>
+                        )}
                       </div>
                     </div>
-                  ) : (
-                    <>
-                      <div className="bento-card p-4 text-center relative overflow-hidden group">
-                        <div className="absolute inset-0 bg-gradient-to-br from-aiko-teal/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                        <div className="w-28 h-28 bg-aiko-teal-bg rounded-[2.5rem] mx-auto mb-2 flex items-center justify-center p-1 border-4 border-white shadow-xl relative z-10 group cursor-pointer overflow-hidden">
-                          <img 
-                            src={profileData.avatar || `https://images.unsplash.com/photo-${userRole === 'worker' ? '1507003211169-0a1dd7228f2d' : '1438761681033-6461ffad8d80'}?w=200&h=200&fit=crop`}
-                            className="w-full h-full rounded-[2rem] object-cover transition-transform group-hover:scale-110" 
-                            alt="Profile" 
-                          />
-                          <div className="absolute inset-0 bg-black/20 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                            <Camera className="text-white" size={24} />
-                          </div>
-                        </div>
-                        <h3 className="text-2xl font-black text-aiko-navy mb-2 relative z-10">{profileData.name}</h3>
-                        <div className="flex items-center justify-center gap-2 text-aiko-teal font-black text-sm mb-2 relative z-10">
-                          <MapPin size={16} />
-                          <span>{profileData.location || (isRTL ? 'الجزائر العاصمة' : 'Algiers Center')}</span>
-                        </div>
-                        <div className="flex justify-center gap-4 relative z-10">
-                          <div className="text-center group/stat cursor-pointer">
-                            <p className="text-xl font-black text-aiko-navy group-hover:text-aiko-teal transition-colors">
-                              {currentUser?.role === 'worker' ? (workerReviewsData.averageRating?.toFixed(1) || "0.0") : (currentUser?.rating || "5.0")}
-                            </p>
-                            <p className="text-[10px] font-black uppercase tracking-widest text-aiko-navy/30 mb-1">{isRTL ? "التقييم" : "Rating"}</p>
-                            <div className="flex gap-0.5 justify-center mt-1 text-aiko-orange">
-                              {[...Array(5)].map((_, i) => (
-                                <Star
-                                  key={i}
-                                  size={10}
-                                  fill={i < Math.round(currentUser?.role === 'worker' ? workerReviewsData.averageRating : (currentUser?.rating || 5)) ? "currentColor" : "none"}
-                                />
-                              ))}
-                            </div>
-                          </div>
-                          <div className="h-10 w-[2px] bg-aiko-gray-100 self-center" />
-                          <div className="text-center group/stat cursor-pointer">
-                            <p className="text-xl font-black text-aiko-navy group-hover:text-aiko-teal transition-colors">
-                              {currentUser?.role === 'worker' ? workerReviewsData.totalReviews : "128"}
-                            </p>
-                            <p className="text-[10px] font-black uppercase tracking-widest text-aiko-navy/30 mb-1">
-                              {currentUser?.role === 'worker' ? (isRTL ? "التقييمات" : "Reviews") : (isRTL ? "المهام" : "Jobs")}
-                            </p>
-                            <div className="w-8 h-1 bg-aiko-teal/20 mx-auto mt-2 rounded-full overflow-hidden">
-                              <div className="w-2/3 h-full bg-aiko-teal" />
-                            </div>
-                          </div>
-                        </div>
-                      </div>
 
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between">
-                          <SectionTitle title={isRTL ? "نبذة عني" : "About Me"} />
-                          <button 
+                    {/* Section 2: Bio */}
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <SectionTitle title={isRTL ? "نبذة عني" : "About Me"} />
+                        {!isEditingProfile && (
+                          <button
                             onClick={() => setIsEditingProfile(true)}
                             className="text-aiko-teal text-[10px] font-black uppercase tracking-widest flex items-center gap-2 hover:text-aiko-orange transition-colors"
                           >
                             <Settings2 size={14} />
                             {isRTL ? "تعديل" : "Edit"}
                           </button>
-                        </div>
-                        <div className="bento-card p-2 border-2 border-transparent hover:border-aiko-teal/5 transition-all">
+                        )}
+                      </div>
+                      <div className="bento-card p-4 relative group">
+                        {isEditingProfile ? (
+                          <div className="space-y-3">
+                            <textarea
+                              className="w-full bg-aiko-gray-50 rounded-2xl p-4 text-sm font-bold text-aiko-navy focus:outline-none focus:ring-4 focus:ring-aiko-teal/5 min-h-[120px] resize-none border-2 border-transparent focus:border-aiko-teal/20 transition-all"
+                              value={profileData.bio}
+                              onChange={(e) => setProfileData({ ...profileData, bio: e.target.value })}
+                              placeholder={isRTL ? "اكتب نبذة عنك هنا..." : "Write your bio here..."}
+                            />
+                            <div className="flex gap-2">
+                              <button
+                                onClick={() => {
+                                  setIsEditingProfile(false);
+                                  setProfileData(prev => ({ ...prev, bio: currentUser?.bio || "" }));
+                                }}
+                                className="flex-1 py-3 rounded-2xl bg-aiko-gray-100 text-aiko-navy font-black text-xs uppercase"
+                              >
+                                {isRTL ? "إلغاء" : "Cancel"}
+                              </button>
+                              <button
+                                onClick={() => handleUpdateProfile()}
+                                className="flex-1 py-3 rounded-2xl bg-aiko-teal text-white font-black text-xs uppercase shadow-lg shadow-aiko-teal/20"
+                              >
+                                {isRTL ? "حفظ" : "Save"}
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
                           <p className="text-sm font-bold text-aiko-navy/60 leading-relaxed">
-                            {profileData.bio}
+                            {profileData.bio || (isRTL ? "لا يوجد وصف حالياً" : "No bio provided yet.")}
                           </p>
-                        </div>
+                        )}
                       </div>
+                    </div>
 
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between">
-                          <SectionTitle title={isRTL ? (userRole === 'worker' ? "معرض أعمالي" : "معرض صوري") : (userRole === 'worker' ? "Works Gallery" : "Photo Gallery")} />
-                          <button className="w-10 h-10 rounded-xl bg-aiko-teal-bg text-aiko-teal flex items-center justify-center hover:bg-aiko-teal hover:text-white transition-all">
-                            <Plus size={20} />
-                          </button>
-                        </div>
-                        <div className="grid grid-cols-2 gap-2">
-                          {profileData.portfolio.map((img, i) => (
-                            <div key={i} className="aspect-video rounded-3xl overflow-hidden shadow-sm border-4 border-white group cursor-pointer hover:shadow-lg transition-all relative">
-                              <img src={img} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" alt="Work" />
-                              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                                <button 
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    const newPortfolio = profileData.portfolio.filter((_, idx) => idx !== i);
-                                    setProfileData({...profileData, portfolio: newPortfolio});
-                                    showToast(isRTL ? 'تم حذف الصورة بنجاح' : 'Image deleted successfully');
-                                  }}
-                                  className="w-8 h-8 rounded-lg bg-red-500 text-white flex items-center justify-center hover:scale-110 transition-transform"
-                                >
-                                  <Trash2 size={16} />
-                                </button>
-                              </div>
-                            </div>
-                          ))}
-                          <button
-                             onClick={() => {
-                               const url = prompt(isRTL ? "أدخل رابط الصورة:" : "Enter image URL:");
-                               if (url) {
-                                 setProfileData({...profileData, portfolio: [...profileData.portfolio, url]});
-                               }
-                             }}
-                             className="aspect-video rounded-3xl border-4 border-dashed border-aiko-gray-100 flex flex-col items-center justify-center gap-2 text-aiko-navy/20 hover:border-aiko-teal/20 hover:text-aiko-teal transition-all"
+                    {/* Section 4: Portfolio */}
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <SectionTitle title={isRTL ? (userRole === 'worker' ? "معرض أعمالي" : "معرض صوري") : (userRole === 'worker' ? "Works Gallery" : "Photo Gallery")} />
+                        <label className="w-10 h-10 rounded-xl bg-aiko-teal-bg text-aiko-teal flex items-center justify-center hover:bg-aiko-teal hover:text-white transition-all cursor-pointer">
+                          <Plus size={20} />
+                          <input
+                            type="file"
+                            className="hidden"
+                            accept="image/*"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file) {
+                                const reader = new FileReader();
+                                reader.onloadend = () => {
+                                  handleAddPortfolioImage(reader.result as string);
+                                };
+                                reader.readAsDataURL(file);
+                              }
+                            }}
+                          />
+                        </label>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        {profileData.portfolio.map((img, i) => (
+                          <div
+                            key={i}
+                            onClick={() => setSelectedPortfolioImage(img)}
+                            className="aspect-video rounded-3xl overflow-hidden shadow-sm border-4 border-white group cursor-pointer hover:shadow-lg transition-all relative"
                           >
-                            <Camera size={32} />
-                            <span className="text-[10px] font-black uppercase tracking-widest">{isRTL ? "إضافة" : "Add"}</span>
-                          </button>
-                        </div>
+                            <img src={img} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" alt="Work" />
+                            <div className="absolute top-2 right-2 flex gap-1">
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDeletePortfolioImage(i);
+                                }}
+                                className="w-8 h-8 rounded-lg bg-red-500 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:scale-110"
+                              >
+                                <Trash2 size={16} />
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                        {profileData.portfolio.length === 0 && (
+                          <div className="col-span-2 aspect-video rounded-3xl border-4 border-dashed border-aiko-gray-100 flex flex-col items-center justify-center gap-2 text-aiko-navy/20">
+                            <ImageIcon size={48} />
+                            <span className="text-[10px] font-black uppercase tracking-widest">{isRTL ? "المعرض فارغ" : "Portfolio Empty"}</span>
+                          </div>
+                        )}
                       </div>
+                    </div>
 
-                      <div className="space-y-3">
-                        <SectionTitle title={isRTL ? "الآراء والتقييمات" : "Ratings & Reviews"} />
-                        
-                        <div className="space-y-2">
-                          {workerReviewsData.reviews.slice(0, 3).map((review) => (
-                            <div key={review.id} className="bento-card p-2 hover:translate-x-1 transition-transform space-y-2">
-                              <div className="flex items-center gap-3">
-                                <div
-                                  onClick={() => handleViewProfile(review.employer.id)}
-                                  className="w-12 h-12 bg-aiko-gray-100 rounded-2xl flex items-center justify-center text-aiko-navy/20 border-2 border-white shadow-sm cursor-pointer hover:scale-105 transition-transform overflow-hidden"
-                                >
-                                  <img
-                                    src={review.employer.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${review.employer.name}`}
-                                    className="w-full h-full object-cover"
-                                    alt=""
-                                  />
+                    {/* Section 3: Reviews */}
+                    <div className="space-y-3">
+                      <SectionTitle title={isRTL ? "ما يقوله الآخرون" : "What others say"} />
+                      <div className="space-y-2">
+                        {workerReviewsData.reviews.map((review) => (
+                          <div key={review.id} className="bento-card p-4 hover:translate-x-1 transition-transform space-y-2">
+                            <div className="flex items-center gap-3">
+                              <div
+                                onClick={() => handleViewProfile(review.employer.id)}
+                                className="w-12 h-12 bg-aiko-gray-100 rounded-2xl flex items-center justify-center border-2 border-white shadow-sm cursor-pointer overflow-hidden"
+                              >
+                                <img
+                                  src={review.employer.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${review.employer.name}`}
+                                  className="w-full h-full object-cover"
+                                  alt=""
+                                />
+                              </div>
+                              <div className="flex-1">
+                                <div className="flex items-center justify-between">
+                                  <h4 onClick={() => handleViewProfile(review.employer.id)} className="text-sm font-black text-aiko-navy hover:text-aiko-teal transition-colors cursor-pointer">
+                                    {review.employer.name}
+                                  </h4>
+                                  <span className="text-[10px] font-bold text-aiko-navy/30">{new Date(review.createdAt).toLocaleDateString()}</span>
                                 </div>
-                                <div className="flex-1">
-                                  <div className="flex items-center justify-between">
-                                    <h4
-                                      onClick={() => handleViewProfile(review.employer.id)}
-                                      className="text-sm font-black text-aiko-navy hover:text-aiko-teal transition-colors cursor-pointer"
-                                    >
-                                      {review.employer.name}
-                                    </h4>
-                                    <span className="text-[10px] font-bold text-aiko-navy/30">{new Date(review.createdAt).toLocaleDateString()}</span>
-                                  </div>
-                                  <div className="flex gap-0.5 text-aiko-orange mt-0.5">
-                                    {[...Array(5)].map((_, i) => <Star key={i} size={10} fill={i < review.rating ? "currentColor" : "none"} />)}
-                                  </div>
+                                <div className="flex gap-0.5 text-aiko-orange mt-0.5">
+                                  {[...Array(5)].map((_, i) => <Star key={i} size={10} fill={i < review.rating ? "currentColor" : "none"} />)}
                                 </div>
                               </div>
-                              <p className="text-xs font-bold text-aiko-navy/60 leading-relaxed">{review.comment}</p>
                             </div>
-                          ))}
-                          {workerReviewsData.reviews.length === 0 && (
-                            <div className="text-center py-10 text-aiko-navy/20 bg-white rounded-[2rem]">
-                              <Star size={48} className="mx-auto mb-2 opacity-10" />
-                              <p className="font-bold">{isRTL ? "لا توجد تقييمات بعد" : "No reviews yet"}</p>
-                            </div>
-                          )}
-                        </div>
+                            <p className="text-xs font-bold text-aiko-navy/60 leading-relaxed">{review.comment}</p>
+                          </div>
+                        ))}
+                        {workerReviewsData.reviews.length === 0 && (
+                          <div className="text-center py-10 text-aiko-navy/20 bg-white rounded-3xl">
+                            <Star size={48} className="mx-auto mb-2 opacity-10" />
+                            <p className="font-bold">{isRTL ? "لا توجد تقييمات بعد" : "No reviews yet"}</p>
+                          </div>
+                        )}
                       </div>
+                    </div>
 
                       <div className="space-y-2">
                         <SectionTitle title={isRTL ? "إعدادات إضافية" : "Additional Settings"} />
@@ -3361,11 +3482,35 @@ export default function App() {
                           {t.logout}
                         </button>
                       </div>
-                    </>
-                  )}
+                    </div>
                 </motion.div>
               )}
             </main>
+
+            {/* Portfolio Full View Modal */}
+            <AnimatePresence>
+              {selectedPortfolioImage && (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="fixed inset-0 z-[500] bg-black/90 flex flex-col items-center justify-center p-4"
+                  onClick={() => setSelectedPortfolioImage(null)}
+                >
+                  <button
+                    onClick={() => setSelectedPortfolioImage(null)}
+                    className="absolute top-6 right-6 w-12 h-12 bg-white/10 rounded-full flex items-center justify-center text-white hover:bg-white/20 transition-all"
+                  >
+                    <X size={24} />
+                  </button>
+                  <img
+                    src={selectedPortfolioImage}
+                    className="max-w-full max-h-full object-contain rounded-xl shadow-2xl"
+                    alt="Work Detail"
+                  />
+                </motion.div>
+              )}
+            </AnimatePresence>
 
             {/* Nav Bar */}
             <div className="flex-none bg-white border-t border-aiko-gray-100 p-2 z-[80]">
@@ -3847,7 +3992,7 @@ export default function App() {
                     initial={{ scale: 0.9, opacity: 0 }}
                     animate={{ scale: 1, opacity: 1 }}
                     exit={{ scale: 0.9, opacity: 0 }}
-                    className="relative w-full max-w-sm bg-white rounded-[24px] p-4 shadow-2xl space-y-3 max-h-[90vh] overflow-y-auto no-scrollbar"
+                    className="relative w-full max-w-lg bg-white rounded-[24px] p-4 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto no-scrollbar"
                   >
                     <button
                       onClick={() => setShowUserProfileModal(false)}
@@ -3856,52 +4001,88 @@ export default function App() {
                       <X size={20} />
                     </button>
 
-                    <div className="flex flex-col items-center text-center space-y-2">
-                      <div className="w-24 h-24 bg-aiko-teal-bg rounded-[2.5rem] flex items-center justify-center p-1 border-4 border-white shadow-xl overflow-hidden">
-                        <img
-                          src={viewedUser.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${viewedUser.name}`}
-                          className="w-full h-full object-cover rounded-[2rem]"
-                          alt=""
-                        />
+                    <div className="flex flex-col items-center text-center space-y-3">
+                      <div className="w-32 h-32 bg-aiko-teal-bg rounded-full flex items-center justify-center p-1 border-4 border-white shadow-xl overflow-hidden">
+                        {viewedUser.avatar ? (
+                          <img src={viewedUser.avatar} className="w-full h-full object-cover" alt="" />
+                        ) : (
+                          <span className="text-5xl font-black text-aiko-teal">{viewedUser.name?.charAt(0).toUpperCase()}</span>
+                        )}
                       </div>
                       <div>
-                        <h3 className="text-2xl font-black text-aiko-navy">{viewedUser.name}</h3>
-                        <div className="flex items-center justify-center gap-2 text-aiko-teal font-black text-sm">
+                        <h3 className="text-3xl font-black text-aiko-navy">{viewedUser.name}</h3>
+                        <div className="flex items-center justify-center gap-2 text-aiko-navy/40 font-bold text-sm">
                           <MapPin size={16} />
-                          <span>{viewedUser.location || (isRTL ? 'الجزائر العاصمة' : 'Algiers')}</span>
+                          <span>{viewedUser.wilaya} {viewedUser.municipality ? `· ${viewedUser.municipality}` : ''}</span>
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-1.5">
-                        {[1,2,3,4,5].map(i => (
-                          <Star
-                            key={i}
-                            size={18}
-                            fill={i <= Math.round(viewedUser.rating || 5) ? "#F5A623" : "none"}
-                            className={i <= Math.round(viewedUser.rating || 5) ? "text-aiko-orange" : "text-aiko-navy/10"}
-                          />
-                        ))}
-                        <span className="text-xs font-black text-aiko-navy/30 ml-2">({viewedUser.rating?.toFixed(1) || "5.0"})</span>
+                      <div className="flex justify-center gap-6">
+                        <div className="text-center">
+                          <p className="text-xl font-black text-aiko-navy">{viewedUser.rating?.toFixed(1) || "5.0"}</p>
+                          <div className="flex gap-0.5 justify-center text-aiko-orange">
+                            {[...Array(5)].map((_, i) => (
+                              <Star key={i} size={12} fill={i < Math.round(viewedUser.rating || 5) ? "currentColor" : "none"} />
+                            ))}
+                          </div>
+                          <p className="text-[10px] font-black uppercase text-aiko-navy/30 mt-1">{isRTL ? "التقييم" : "Rating"}</p>
+                        </div>
+                        {viewedUser.role === 'worker' && (
+                          <div className="text-center">
+                            <p className="text-xl font-black text-aiko-navy">{viewedUser.completedTasks || 0}</p>
+                            <div className="flex justify-center text-aiko-teal">
+                              <CheckCircle2 size={12} />
+                            </div>
+                            <p className="text-[10px] font-black uppercase text-aiko-navy/30 mt-1">{isRTL ? "المهام" : "Tasks"}</p>
+                          </div>
+                        )}
                       </div>
                     </div>
 
-                    <div className="space-y-2">
+                    <div className="space-y-4">
                       <div className="space-y-2">
                         <SectionTitle title={isRTL ? "نبذة" : "Bio"} />
-                        <p className="text-sm font-bold text-aiko-navy/60 leading-relaxed bg-aiko-gray-50 p-2 rounded-2xl">
+                        <p className="text-sm font-bold text-aiko-navy/60 leading-relaxed bg-aiko-gray-50 p-4 rounded-2xl">
                           {viewedUser.bio || (isRTL ? "لا يوجد وصف حالياً" : "No bio provided")}
                         </p>
                       </div>
 
-                      {viewedUser.skills && viewedUser.skills.length > 0 && (
+                      {viewedUser.portfolio && viewedUser.portfolio.length > 0 && (
                         <div className="space-y-2">
-                          <SectionTitle title={isRTL ? "المهارات" : "Skills"} />
-                          <div className="flex flex-wrap gap-2">
-                            {viewedUser.skills.map((skill: string) => (
-                              <span key={skill} className="px-3 py-1 bg-aiko-teal-bg text-aiko-teal-dark rounded-full text-[10px] font-black uppercase tracking-widest border border-aiko-teal/10">
-                                {skill}
-                              </span>
+                          <SectionTitle title={isRTL ? "معرض الأعمال" : "Portfolio"} />
+                          <div className="grid grid-cols-2 gap-2">
+                            {viewedUser.portfolio.map((img: string, i: number) => (
+                              <div
+                                key={i}
+                                onClick={() => setSelectedPortfolioImage(img)}
+                                className="aspect-video rounded-2xl overflow-hidden border-2 border-white shadow-sm cursor-pointer hover:scale-105 transition-transform"
+                              >
+                                <img src={img} className="w-full h-full object-cover" alt="" />
+                              </div>
                             ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {viewedUser.role === 'worker' && (
+                        <div className="space-y-2">
+                          <SectionTitle title={isRTL ? "ما يقوله الآخرون" : "Reviews"} />
+                          <div className="space-y-2">
+                            {viewedUserReviews.map((review) => (
+                              <div key={review.id} className="bg-aiko-gray-50 p-3 rounded-2xl space-y-1">
+                                <div className="flex items-center justify-between">
+                                  <span className="text-xs font-black text-aiko-navy">{review.employer.name}</span>
+                                  <span className="text-[10px] font-bold text-aiko-navy/30">{new Date(review.createdAt).toLocaleDateString()}</span>
+                                </div>
+                                <div className="flex gap-0.5 text-aiko-orange">
+                                  {[...Array(5)].map((_, i) => <Star key={i} size={8} fill={i < review.rating ? "currentColor" : "none"} />)}
+                                </div>
+                                <p className="text-[11px] font-bold text-aiko-navy/60 leading-relaxed">{review.comment}</p>
+                              </div>
+                            ))}
+                            {viewedUserReviews.length === 0 && (
+                              <p className="text-[10px] font-bold text-aiko-navy/20 text-center py-2">{isRTL ? "لا توجد تقييمات بعد" : "No reviews yet"}</p>
+                            )}
                           </div>
                         </div>
                       )}
@@ -3909,7 +4090,7 @@ export default function App() {
 
                     <button
                       onClick={() => handleOpenChat(viewedUser)}
-                      className="w-full py-3 rounded-[2rem] bg-aiko-teal text-white font-black text-sm uppercase tracking-widest hover:bg-aiko-teal-dark transition-all shadow-xl shadow-aiko-teal/20 flex items-center justify-center gap-3"
+                      className="w-full py-4 rounded-2xl bg-aiko-teal text-white font-black text-sm uppercase shadow-xl shadow-aiko-teal/20 flex items-center justify-center gap-3"
                     >
                       <MessageCircle size={20} />
                       {isRTL ? "تواصل معه" : "Contact Him"}
