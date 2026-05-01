@@ -3,7 +3,7 @@ import { Server } from "socket.io";
 
 export interface CreateNotificationParams {
   userId: string;
-  type: "new_request" | "request_assigned" | "new_message" | "request_completed" | "new_review";
+  type: "new_request" | "request_assigned" | "new_message" | "request_completed" | "new_review" | "new_application" | "application_accepted" | "application_rejected" | "new_offer" | "offer_accepted" | "offer_rejected";
   title: string;
   body: string;
   data?: any;

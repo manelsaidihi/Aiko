@@ -40,7 +40,7 @@ router.post('/', authenticateRequest, async (req: AuthRequest, res: Response) =>
     const io = req.app.get('io');
     await sendNotification(io, {
       userId: availability.workerId,
-      type: 'new_request',
+      type: 'new_offer',
       title: 'عرض عمل جديد!',
       body: 'لديك عرض عمل جديد',
       data: { offerId: offer.id }
@@ -96,14 +96,19 @@ router.patch('/:id/accept', authenticateRequest, async (req: AuthRequest, res: R
 
     const updatedOffer = await prisma.workerOffer.update({
       where: { id },
-      data: { status: 'accepted' }
+      data: { status: 'accepted' },
+      include: {
+        employer: {
+          select: { id: true, name: true, avatar: true, role: true }
+        }
+      }
     });
 
     // Notify employer
     const io = req.app.get('io');
     await sendNotification(io, {
       userId: offer.employerId,
-      type: 'request_assigned',
+      type: 'offer_accepted',
       title: 'تم قبول عرضك!',
       body: 'تم قبول عرضك من قبل العامل',
       data: { offerId: id, senderId: userId }
@@ -154,7 +159,7 @@ router.patch('/:id/reject', authenticateRequest, async (req: AuthRequest, res: R
     const io = req.app.get('io');
     await sendNotification(io, {
       userId: offer.employerId,
-      type: 'request_completed',
+      type: 'offer_rejected',
       title: 'تم رفض عرضك',
       body: 'تم رفض عرضك من قبل العامل',
       data: { offerId: id, senderId: userId }

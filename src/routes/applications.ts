@@ -47,7 +47,7 @@ router.post('/', authenticateRequest, async (req: AuthRequest, res: Response) =>
     const io = req.app.get('io');
     await sendNotification(io, {
       userId: service.employerId,
-      type: 'new_request',
+      type: 'new_application',
       title: 'تقديم جديد على وظيفتك',
       body: 'تقدم عامل جديد على وظيفتك',
       data: { requestId: serviceRequestId, applicationId: application.id }
@@ -138,7 +138,12 @@ router.patch('/:id/accept', authenticateRequest, async (req: AuthRequest, res: R
 
     const updatedApplication = await prisma.jobApplication.update({
       where: { id },
-      data: { status: 'accepted' }
+      data: { status: 'accepted' },
+      include: {
+        worker: {
+          select: { id: true, name: true, avatar: true, role: true }
+        }
+      }
     });
 
     // Update service request
@@ -154,7 +159,7 @@ router.patch('/:id/accept', authenticateRequest, async (req: AuthRequest, res: R
     const io = req.app.get('io');
     await sendNotification(io, {
       userId: application.workerId,
-      type: 'request_assigned',
+      type: 'application_accepted',
       title: 'تم قبول طلبك!',
       body: `صاحب العمل قبل طلبك لوظيفة: ${application.serviceRequest.title}`,
       data: { requestId: application.serviceRequestId, senderId: userId }
@@ -206,7 +211,7 @@ router.patch('/:id/reject', authenticateRequest, async (req: AuthRequest, res: R
     const io = req.app.get('io');
     await sendNotification(io, {
       userId: application.workerId,
-      type: 'request_completed',
+      type: 'application_rejected',
       title: 'تم رفض طلبك',
       body: `تم رفض طلبك للتقديم على: ${application.serviceRequest.title}`,
       data: { requestId: application.serviceRequestId, senderId: userId }

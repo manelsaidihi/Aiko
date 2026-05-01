@@ -1028,9 +1028,13 @@ export default function App() {
         }
       });
       if (response.ok) {
+        const data = await response.json();
         showToast(status === 'accept' ? (isRTL ? "تم قبول المتقدم بنجاح" : "Applicant accepted") : (isRTL ? "تم رفض المتقدم" : "Applicant rejected"));
         fetchApplicants(requestId);
         fetchMyRequests();
+        if (status === 'accept') {
+          handleOpenChat(data.worker || { id: data.workerId });
+        }
       }
     } catch (err) {
       console.error("Error updating application status:", err);
@@ -1063,9 +1067,13 @@ export default function App() {
         }
       });
       if (response.ok) {
+        const data = await response.json();
         showToast(status === 'accept' ? (isRTL ? "تم قبول العرض بنجاح" : "Offer accepted") : (isRTL ? "تم رفض العرض" : "Offer rejected"));
         fetchIncomingOffers();
         fetchMyRequests();
+        if (status === 'accept') {
+          handleOpenChat(data.employer || { id: data.employerId });
+        }
       }
     } catch (err) {
       console.error("Error updating offer status:", err);
@@ -2502,7 +2510,7 @@ export default function App() {
                             type={job.category}
                             icon={SERVICE_CATEGORIES.find(c => c.id === job.category)?.icon || Hammer}
                             lang={lang}
-                            onApply={() => handleOpenItem(job)}
+                            onApply={() => handleOpenItem({...job, icon: SERVICE_CATEGORIES.find(c => c.id === job.category)?.icon || Hammer, price: job.budget})}
                             onContact={() => {
                               setContactTarget(job);
                               setShowContactModal(true);
@@ -2623,13 +2631,18 @@ export default function App() {
                               </p>
                             </div>
 
-                            <div className="flex items-center justify-between pt-1 border-t border-aiko-gray-100">
-                               <span className="text-[10px] font-black text-aiko-teal">{avail.hourlyRate} DA</span>
+                            <div className="flex items-center justify-between pt-1 border-t border-aiko-gray-100 gap-2">
+                               <button
+                                 onClick={(e) => { e.stopPropagation(); setActiveItem(avail); setShowSendOfferModal(true); }}
+                                 className="flex-1 bg-aiko-orange text-white text-[8px] font-black uppercase tracking-widest py-1.5 rounded-lg hover:bg-aiko-orange-dark transition-all active:scale-95"
+                               >
+                                 {isRTL ? "إرسال عرض" : "Send Offer"}
+                               </button>
                                <button
                                 onClick={() => handleOpenChat(avail.worker)}
-                                className="w-6 h-6 bg-aiko-teal text-white rounded-lg flex items-center justify-center hover:bg-aiko-teal-dark transition-all"
+                                className="w-7 h-7 bg-aiko-teal-bg text-aiko-teal rounded-lg flex items-center justify-center hover:bg-aiko-teal hover:text-white transition-all flex-shrink-0"
                               >
-                                <MessageCircle size={12} />
+                                <MessageCircle size={14} />
                               </button>
                             </div>
                           </motion.div>
@@ -3371,7 +3384,7 @@ export default function App() {
             <div className="flex-none bg-white border-t border-aiko-gray-100 p-2 z-[80]">
               <nav className="flex items-center justify-around">
                 <NavItem icon={userRole === 'worker' ? Globe : Search} label={userRole === 'worker' ? t.nav_jobs : t.nav_workers} active={activeTab === 'feed'} onClick={() => setActiveTab('feed')} i18nKey={userRole === 'worker' ? "nav_jobs" : "nav_workers"} />
-                <NavItem icon={Briefcase} label={userRole === 'worker' ? t.nav_requests : t.nav_myjobs} active={activeTab === 'activity'} onClick={() => setActiveTab('activity')} count={1} i18nKey={userRole === 'worker' ? "nav_requests" : "nav_myjobs"} />
+                <NavItem icon={Briefcase} label={userRole === 'worker' ? t.nav_myapps : t.nav_myjobs} active={activeTab === 'activity'} onClick={() => setActiveTab('activity')} i18nKey={userRole === 'worker' ? "nav_myapps" : "nav_myjobs"} />
                 <NavItem
                   icon={MessageCircle}
                   label={t.nav_messages}
@@ -3413,7 +3426,7 @@ export default function App() {
                         }}
                         className="w-24 h-24 bg-aiko-teal-bg text-aiko-teal rounded-[16px] flex items-center justify-center cursor-pointer hover:scale-105 transition-transform"
                       >
-                        <activeItem.icon size={48} />
+                        {activeItem.icon ? <activeItem.icon size={48} /> : <Briefcase size={48} />}
                       </div>
                       <div>
                         <h3 className="text-2xl font-black text-aiko-navy">{activeItem.title || activeItem.name}</h3>
@@ -3515,10 +3528,10 @@ export default function App() {
                               // Mark as read locally and perform action
                               setNotifications(notifications.map(n => n.id === notif.id ? { ...n, isRead: true } : n));
 
-                              if (notif.type === 'new_message' && notif.data?.senderId) {
+                              if ((notif.type === 'new_message' || notif.type === 'application_accepted' || notif.type === 'application_rejected' || notif.type === 'offer_accepted' || notif.type === 'offer_rejected') && notif.data?.senderId) {
                                 setShowNotification(false);
                                 // Fetch full user data before opening chat
-                                fetch(`/api/auth/user/${notif.data.senderId}`, {
+                                fetch(`${API_URL}/api/auth/user/${notif.data.senderId}`, {
                                   headers: { "Authorization": `Bearer ${authService.getToken()}` }
                                 })
                                 .then(res => res.json())
@@ -3530,6 +3543,18 @@ export default function App() {
                                   }
                                 })
                                 .catch(() => handleOpenChat({ id: notif.data.senderId, name: 'User' }));
+                              } else if (notif.type === 'new_application') {
+                                setShowNotification(false);
+                                setActiveTab('activity');
+                                if (notif.data?.requestId) {
+                                  setActiveJobTab(prev => ({ ...prev, [notif.data.requestId]: 'applicants' }));
+                                  fetchApplicants(notif.data.requestId);
+                                }
+                              } else if (notif.type === 'new_offer') {
+                                setShowNotification(false);
+                                setActiveTab('activity');
+                                setActiveActivityTab('offers');
+                                fetchIncomingOffers();
                               } else if (notif.type === 'new_request' || notif.type === 'request_assigned' || notif.type === 'request_completed') {
                                 setShowNotification(false);
                                 if (notif.data?.requestId) {
@@ -3568,15 +3593,17 @@ export default function App() {
                                 }
                               }}
                               className={`flex-shrink-0 w-16 h-16 rounded-3xl flex items-center justify-center transition-transform group-hover:scale-110 cursor-pointer ${
-                                notif.type === 'new_request' ? 'bg-orange-100 text-orange-500' :
+                                (notif.type === 'new_request' || notif.type === 'new_application' || notif.type === 'new_offer') ? 'bg-orange-100 text-orange-500' :
                                 notif.type === 'new_message' ? 'bg-blue-100 text-blue-600' :
-                                notif.type === 'request_assigned' || notif.type === 'request_completed' ? 'bg-green-100 text-green-500' :
+                                (notif.type === 'request_assigned' || notif.type === 'request_completed' || notif.type === 'application_accepted' || notif.type === 'offer_accepted') ? 'bg-green-100 text-green-500' :
+                                (notif.type === 'application_rejected' || notif.type === 'offer_rejected') ? 'bg-red-100 text-red-500' :
                                 'bg-purple-100 text-purple-500'
                               }`}
                             >
-                              {notif.type === 'new_request' && <Zap size={28} fill="currentColor" />}
+                              {(notif.type === 'new_request' || notif.type === 'new_application' || notif.type === 'new_offer') && <Zap size={28} fill="currentColor" />}
                               {notif.type === 'new_message' && <MessageCircle size={28} />}
-                              {(notif.type === 'request_assigned' || notif.type === 'request_completed') && <CheckCircle2 size={28} />}
+                              {(notif.type === 'request_assigned' || notif.type === 'request_completed' || notif.type === 'application_accepted' || notif.type === 'offer_accepted') && <CheckCircle2 size={28} />}
+                              {(notif.type === 'application_rejected' || notif.type === 'offer_rejected') && <X size={28} />}
                               {notif.type === 'new_review' && <Star size={28} fill="currentColor" />}
                             </div>
 
