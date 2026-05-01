@@ -2733,14 +2733,26 @@ export default function App() {
                               </p>
                             </div>
 
-                            <div className="flex items-center justify-between pt-1 border-t border-aiko-gray-100">
-                               <span className="text-[10px] font-black text-aiko-teal">{avail.hourlyRate} DA</span>
-                               <button
-                                onClick={() => handleOpenChat(avail.worker)}
-                                className="w-6 h-6 bg-aiko-teal text-white rounded-lg flex items-center justify-center hover:bg-aiko-teal-dark transition-all"
-                              >
-                                <MessageCircle size={12} />
-                              </button>
+                            <div className="flex items-center justify-between pt-1 border-t border-aiko-gray-100 gap-1">
+                               <span className="text-[10px] font-black text-aiko-teal whitespace-nowrap">{avail.hourlyRate} DA</span>
+                               <div className="flex items-center gap-1">
+                                 <button
+                                   onClick={(e) => {
+                                     e.stopPropagation();
+                                     setActiveItem(avail);
+                                     setShowSendOfferModal(true);
+                                   }}
+                                   className="px-2 py-1 bg-aiko-orange text-white text-[9px] font-black rounded-lg hover:bg-aiko-orange-dark transition-all"
+                                 >
+                                   {isRTL ? "إرسال عرض" : "Offer"}
+                                 </button>
+                                 <button
+                                  onClick={() => handleOpenChat(avail.worker)}
+                                  className="w-6 h-6 bg-aiko-teal text-white rounded-lg flex items-center justify-center hover:bg-aiko-teal-dark transition-all"
+                                >
+                                  <MessageCircle size={12} />
+                                </button>
+                               </div>
                             </div>
                           </motion.div>
                         ))}
@@ -2855,14 +2867,12 @@ export default function App() {
                                 {app.status === 'pending' ? (isRTL ? "قيد الانتظار" : "Pending") : app.status === 'accepted' ? (isRTL ? "مقبول" : "Accepted") : (isRTL ? "مرفوض" : "Rejected")}
                               </div>
                             </div>
-                            {app.status === 'pending' && (
-                              <button
-                                onClick={() => handleDeleteApplication(app.id)}
-                                className="text-[10px] font-black text-red-500 uppercase tracking-widest self-end hover:underline"
-                              >
-                                {isRTL ? "سحب الطلب" : "Cancel Application"}
-                              </button>
-                            )}
+                            <button
+                              onClick={() => handleDeleteApplication(app.id)}
+                              className="text-[10px] font-black text-red-500 uppercase tracking-widest self-end hover:underline"
+                            >
+                              {isRTL ? "حذف الطلب" : "Delete Application"}
+                            </button>
                           </div>
                         ))}
                         {myApplications.length === 0 && (
@@ -3663,7 +3673,7 @@ export default function App() {
                               if (notif.type === 'new_message' && notif.data?.senderId) {
                                 setShowNotification(false);
                                 // Fetch full user data before opening chat
-                                fetch(`/api/auth/user/${notif.data.senderId}`, {
+                                fetch(`${API_URL}/api/auth/profile/${notif.data.senderId}`, {
                                   headers: { "Authorization": `Bearer ${authService.getToken()}` }
                                 })
                                 .then(res => res.json())
@@ -3677,6 +3687,18 @@ export default function App() {
                                 .catch(() => handleOpenChat({ id: notif.data.senderId, name: 'User' }));
                               } else if (notif.type === 'new_request' || notif.type === 'request_assigned' || notif.type === 'request_completed') {
                                 setShowNotification(false);
+
+                                if (notif.type === 'request_assigned' && notif.data?.senderId) {
+                                   fetch(`${API_URL}/api/auth/profile/${notif.data.senderId}`, {
+                                      headers: { "Authorization": `Bearer ${authService.getToken()}` }
+                                   })
+                                   .then(res => res.json())
+                                   .then(userData => {
+                                      if (userData && !userData.error) handleOpenChat(userData);
+                                   });
+                                   return;
+                                }
+
                                 if (notif.data?.requestId) {
                                   fetch(`${API_URL}/api/services/${notif.data.requestId}`, {
                                     headers: { "Authorization": `Bearer ${authService.getToken()}` }
@@ -3686,10 +3708,19 @@ export default function App() {
                                     if (service && !service.error) {
                                       const catIcon = SERVICE_CATEGORIES.find(c => c.id === service.category)?.icon || Hammer;
                                       handleOpenItem({ ...service, icon: catIcon });
+                                      if (notif.type === 'new_request' && userRole === 'employer') {
+                                         setActiveJobTab(prev => ({ ...prev, [service.id]: 'applicants' }));
+                                         fetchApplicants(service.id);
+                                      }
                                     }
                                   })
                                   .catch(err => console.error("Error fetching service detail:", err));
                                 }
+
+                                if (notif.data?.offerId && userRole === 'worker') {
+                                   setActiveActivityTab('offers');
+                                }
+
                                 setActiveTab('activity');
                               } else if (notif.type === 'new_review') {
                                 setShowNotification(false);
