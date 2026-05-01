@@ -228,6 +228,16 @@ async function startServer() {
   httpServer.listen(Number(PORT), "0.0.0.0", () => {
     console.log(`Aiko server running on http://localhost:${PORT}`);
   });
+
+  // Keep alive ping for Render free tier
+  setInterval(async () => {
+    try {
+      await fetch('https://aiko-app.onrender.com/api/health');
+      console.log('Keep alive ping sent');
+    } catch (error) {
+      console.error('Keep alive failed:', error);
+    }
+  }, 14 * 60 * 1000); // كل 14 دقيقة
 }
 
 startServer();
