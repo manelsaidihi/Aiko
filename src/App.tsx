@@ -723,6 +723,40 @@ const WorkerCard = ({ name, skill, rating, price, distance, icon: Icon, onOffer,
   );
 };
 
+// --- Error Boundary ---
+class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { hasError: boolean }> {
+  constructor(props: any) {
+    super(props);
+    this.state = { hasError: false };
+  }
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+  componentDidCatch(error: any, errorInfo: any) {
+    console.error("Aiko App Error:", error, errorInfo);
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="flex flex-col items-center justify-center h-screen p-4 bg-aiko-gray-100 text-center">
+          <div className="w-20 h-20 bg-red-100 text-red-500 rounded-3xl flex items-center justify-center mb-4">
+            <X size={40} />
+          </div>
+          <h1 className="text-2xl font-black text-aiko-navy mb-2">عذراً، حدث خطأ غير متوقع</h1>
+          <p className="text-aiko-navy/40 font-bold mb-6">يرجى المحاولة مرة أخرى أو إعادة تحميل الصفحة</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="px-8 py-3 bg-aiko-teal text-white rounded-2xl font-black shadow-lg shadow-aiko-teal/20"
+          >
+            إعادة تحميل التطبيق
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 // --- Main App ---
 import { authService } from './services/authService';
 
@@ -758,6 +792,11 @@ export default function App() {
   const [contactTarget, setContactTarget] = useState<any>(null);
   const [activeItem, setActiveItem] = useState<any>(null);
   const [showSendOfferModal, setShowSendOfferModal] = useState(false);
+  const [showOfferModal, setShowOfferModal] = useState(false);
+  const [selectedAvailabilityId, setSelectedAvailabilityId] = useState('');
+  const [offerPrice, setOfferPrice] = useState('');
+  const [offerTiming, setOfferTiming] = useState('');
+  const [offerMessage, setOfferMessage] = useState('');
   const [offerData, setOfferData] = useState({
     price: '',
     timing: '',
@@ -1120,6 +1159,24 @@ export default function App() {
     }
   };
 
+  const handleApply = async (serviceRequestId: string) => {
+    try {
+      const response = await fetch(`${API_URL}/api/applications`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('aiko_token')}`
+        },
+        body: JSON.stringify({ serviceRequestId })
+      });
+      if (response.ok) {
+        alert('تم إرسال طلبك بنجاح');
+      }
+    } catch (error) {
+      alert('حدث خطأ، حاول مرة أخرى');
+    }
+  };
+
   const handleApplyToJob = async (serviceRequestId: string) => {
     try {
       const response = await fetch(`${API_URL}/api/applications`, {
@@ -1151,22 +1208,24 @@ export default function App() {
           "Authorization": `Bearer ${authService.getToken()}`
         },
         body: JSON.stringify({
-          availabilityId: activeItem.id,
-          price: offerData.price,
-          timing: offerData.timing,
-          message: offerData.message
+          availabilityId: selectedAvailabilityId,
+          price: offerPrice,
+          timing: offerTiming,
+          message: offerMessage
         })
       });
       if (response.ok) {
-        showToast(isRTL ? "تم إرسال عرضك بنجاح" : "Offer sent successfully");
-        setShowSendOfferModal(false);
-        setOfferData({ price: '', timing: '', message: '' });
+        alert('تم إرسال العرض بنجاح');
+        setShowOfferModal(false);
+        setOfferPrice('');
+        setOfferTiming('');
+        setOfferMessage('');
       } else {
         const err = await response.json();
-        showToast(err.error || "Failed to send offer", "error");
+        alert(err.error || "فشل إرسال العرض");
       }
     } catch (err) {
-      console.error("Error sending offer:", err);
+      alert("حدث خطأ، حاول مرة أخرى");
     }
   };
 
@@ -2117,6 +2176,7 @@ export default function App() {
   }
 
   return (
+    <ErrorBoundary>
     <div className={`h-screen flex flex-col bg-aiko-gray-100 text-aiko-navy font-sans tracking-tight overflow-hidden`} dir={isRTL ? 'rtl' : 'ltr'}>
       <AnimatePresence mode="wait">
         
@@ -2739,8 +2799,8 @@ export default function App() {
                                  <button
                                    onClick={(e) => {
                                      e.stopPropagation();
-                                     setActiveItem(avail);
-                                     setShowSendOfferModal(true);
+                                     setSelectedAvailabilityId(avail.id);
+                                     setShowOfferModal(true);
                                    }}
                                    className="px-2 py-1 bg-aiko-orange text-white text-[9px] font-black rounded-lg hover:bg-aiko-orange-dark transition-all"
                                  >
@@ -3599,11 +3659,10 @@ export default function App() {
                         <button
                           onClick={() => {
                             if (userRole === 'worker') {
-                              handleApplyToJob(activeItem.id);
-                              setActiveItem(null);
+                              handleApply(activeItem.id);
                             } else {
-                              setShowSendOfferModal(true);
-                              setActiveItem(activeItem); // Ensure it's set
+                              setSelectedAvailabilityId(activeItem.id);
+                              setShowOfferModal(true);
                             }
                           }}
                           className="btn-primary w-full py-3 text-sm uppercase tracking-[0.2em]"
@@ -3824,13 +3883,13 @@ export default function App() {
 
             {/* Send Offer Modal */}
             <AnimatePresence>
-              {showSendOfferModal && (
+              {showOfferModal && (
                 <div className="fixed inset-0 z-[300] flex items-center justify-center p-2">
                   <motion.div
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
-                    onClick={() => setShowSendOfferModal(false)}
+                    onClick={() => setShowOfferModal(false)}
                     className="absolute inset-0 bg-aiko-navy/60 backdrop-blur-md"
                   />
                   <motion.div
@@ -3851,22 +3910,22 @@ export default function App() {
                       <FormInput
                         label={isRTL ? "السعر المقترح (دج)" : "Proposed Price (DA)"}
                         type="number"
-                        value={offerData.price}
-                        onChange={(val: string) => setOfferData({...offerData, price: val})}
+                        value={offerPrice}
+                        onChange={(val: string) => setOfferPrice(val)}
                         icon={Sparkles}
                       />
                       <FormInput
                         label={isRTL ? "التوقيت المقترح" : "Proposed Timing"}
                         placeholder={isRTL ? "مثال: غداً الساعة 10 صباحاً" : "e.g. Tomorrow at 10 AM"}
-                        value={offerData.timing}
-                        onChange={(val: string) => setOfferData({...offerData, timing: val})}
+                        value={offerTiming}
+                        onChange={(val: string) => setOfferTiming(val)}
                         icon={Clock}
                       />
                       <div className="space-y-1">
                         <label className="text-[10px] font-black uppercase tracking-widest text-aiko-navy/40 px-4">{isRTL ? "رسالة قصيرة (اختياري)" : "Short Message (Optional)"}</label>
                         <textarea
-                          value={offerData.message}
-                          onChange={(e) => setOfferData({ ...offerData, message: e.target.value })}
+                          value={offerMessage}
+                          onChange={(e) => setOfferMessage(e.target.value)}
                           className="w-full bg-aiko-gray-50 rounded-2xl p-2 text-sm font-bold text-aiko-navy focus:outline-none focus:border-aiko-teal border-2 border-transparent transition-all min-h-[80px] resize-none"
                         />
                       </div>
@@ -3874,7 +3933,7 @@ export default function App() {
 
                     <div className="flex gap-2">
                       <button
-                        onClick={() => setShowSendOfferModal(false)}
+                        onClick={() => setShowOfferModal(false)}
                         className="flex-1 py-3 rounded-2xl bg-aiko-gray-100 text-aiko-navy font-black text-sm uppercase tracking-widest hover:bg-aiko-gray-200 transition-all"
                       >
                         {isRTL ? "إلغاء" : "Cancel"}
@@ -4830,6 +4889,7 @@ export default function App() {
         )}
       </AnimatePresence>
     </div>
+    </ErrorBoundary>
   );
 }
 
