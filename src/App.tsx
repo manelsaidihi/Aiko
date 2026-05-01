@@ -6,6 +6,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { io, Socket } from 'socket.io-client';
+import API_URL from './config';
 import {
 Briefcase,
   Search, 
@@ -840,7 +841,7 @@ export default function App() {
       const params = new URLSearchParams();
       if (filters.category && filters.category !== 'all') params.append('category', filters.category);
       if (filters.wilaya) params.append('wilaya', filters.wilaya);
-      const response = await fetch(`/api/availability?${params.toString()}`);
+      const response = await fetch(`${API_URL}/api/availability?${params.toString()}`);
       if (response.ok) {
         const data = await response.json();
         setAvailableWorkers(data.availabilities);
@@ -856,7 +857,7 @@ export default function App() {
       if (filters.category && filters.category !== 'all') params.append('category', filters.category);
       if (filters.wilaya) params.append('wilaya', filters.wilaya);
       params.append('status', 'open');
-      const response = await fetch(`/api/services?${params.toString()}`);
+      const response = await fetch(`${API_URL}/api/services?${params.toString()}`);
       if (response.ok) {
         const data = await response.json();
         setJobs(data.services);
@@ -868,7 +869,7 @@ export default function App() {
 
   const toggleAvailability = async () => {
     try {
-      const response = await fetch("/api/availability/toggle", {
+      const response = await fetch(`${API_URL}/api/availability/toggle`, {
         method: 'PATCH',
         headers: { "Authorization": `Bearer ${authService.getToken()}` }
       });
@@ -883,8 +884,9 @@ export default function App() {
   };
 
   const initSocket = (token: string, userId: string) => {
-    const newSocket = io(window.location.origin, {
-      auth: { token }
+    const newSocket = io(API_URL, {
+      auth: { token },
+      transports: ["websocket", "polling"]
     });
     setSocket(newSocket);
     newSocket.emit("join", { id: userId });
@@ -894,7 +896,7 @@ export default function App() {
   const fetchConversations = async () => {
     try {
       const token = authService.getToken();
-      const response = await fetch("/api/messages/conversations", {
+      const response = await fetch(`${API_URL}/api/messages/conversations`, {
         headers: { "Authorization": `Bearer ${token}` }
       });
       if (response.ok) {
@@ -909,7 +911,7 @@ export default function App() {
   const fetchNotifications = async () => {
     try {
       const token = authService.getToken();
-      const response = await fetch("/api/notifications", {
+      const response = await fetch(`${API_URL}/api/notifications`, {
         headers: { "Authorization": `Bearer ${token}` }
       });
       if (response.ok) {
@@ -924,7 +926,7 @@ export default function App() {
   const markAllAsRead = async () => {
     try {
       const token = authService.getToken();
-      const response = await fetch("/api/notifications/read-all", {
+      const response = await fetch(`${API_URL}/api/notifications/read-all`, {
         method: 'PATCH',
         headers: { "Authorization": `Bearer ${token}` }
       });
@@ -946,7 +948,7 @@ export default function App() {
       if (workerAvailability?.category) {
         params.append('category', workerAvailability.category);
       }
-      const response = await fetch(`/api/services/instant/active?${params.toString()}`, {
+      const response = await fetch(`${API_URL}/api/services/instant/active?${params.toString()}`, {
         headers: { "Authorization": `Bearer ${token}` }
       });
       if (response.ok) {
@@ -961,7 +963,7 @@ export default function App() {
   const fetchMyRequests = async () => {
     try {
       const token = authService.getToken();
-      const response = await fetch("/api/services/my/requests", {
+      const response = await fetch(`${API_URL}/api/services/my/requests`, {
         headers: { "Authorization": `Bearer ${token}` }
       });
       if (response.ok) {
@@ -975,7 +977,7 @@ export default function App() {
 
   const fetchApplicants = async (requestId: string) => {
     try {
-      const response = await fetch(`/api/services/${requestId}/applicants`, {
+      const response = await fetch(`${API_URL}/api/services/${requestId}/applicants`, {
         headers: { "Authorization": `Bearer ${authService.getToken()}` }
       });
       if (response.ok) {
@@ -989,7 +991,7 @@ export default function App() {
 
   const fetchIncomingOffers = async () => {
     try {
-      const response = await fetch("/api/offers/my", {
+      const response = await fetch(`${API_URL}/api/offers/my`, {
         headers: { "Authorization": `Bearer ${authService.getToken()}` }
       });
       if (response.ok) {
@@ -1003,7 +1005,7 @@ export default function App() {
 
   const fetchMyApplications = async () => {
     try {
-      const response = await fetch("/api/applications/my", {
+      const response = await fetch(`${API_URL}/api/applications/my`, {
         headers: { "Authorization": `Bearer ${authService.getToken()}` }
       });
       if (response.ok) {
@@ -1017,7 +1019,7 @@ export default function App() {
 
   const handleUpdateApplicationStatus = async (applicationId: string, status: string, requestId: string) => {
     try {
-      const response = await fetch(`/api/applications/${applicationId}/${status}`, {
+      const response = await fetch(`${API_URL}/api/applications/${applicationId}/${status}`, {
         method: 'PATCH',
         headers: {
           "Authorization": `Bearer ${authService.getToken()}`
@@ -1035,7 +1037,7 @@ export default function App() {
 
   const handleUpdateOfferStatus = async (offerId: string, status: string) => {
     try {
-      const response = await fetch(`/api/offers/${offerId}/${status}`, {
+      const response = await fetch(`${API_URL}/api/offers/${offerId}/${status}`, {
         method: 'PATCH',
         headers: {
           "Authorization": `Bearer ${authService.getToken()}`
@@ -1053,7 +1055,7 @@ export default function App() {
 
   const handleApplyToJob = async (serviceRequestId: string) => {
     try {
-      const response = await fetch(`/api/applications`, {
+      const response = await fetch(`${API_URL}/api/applications`, {
         method: 'POST',
         headers: {
           "Content-Type": "application/json",
@@ -1075,7 +1077,7 @@ export default function App() {
 
   const handleSendOffer = async () => {
     try {
-      const response = await fetch("/api/offers", {
+      const response = await fetch(`${API_URL}/api/offers`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -1101,7 +1103,7 @@ export default function App() {
 
   const handleCompleteRequest = async (requestId: string, workerId: string) => {
     try {
-      const response = await fetch(`/api/services/${requestId}/complete`, {
+      const response = await fetch(`${API_URL}/api/services/${requestId}/complete`, {
         method: 'PATCH',
         headers: {
           'Authorization': `Bearer ${authService.getToken()}`
@@ -1122,7 +1124,7 @@ export default function App() {
 
   const submitReview = async () => {
     try {
-      const response = await fetch("/api/reviews", {
+      const response = await fetch(`${API_URL}/api/reviews`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -1146,11 +1148,11 @@ export default function App() {
 
   const handleCreateService = async () => {
     try {
-      let url = isEditingService ? `/api/services/${editingServiceId}` : "/api/services";
+      let url = isEditingService ? `${API_URL}/api/services/${editingServiceId}` : `${API_URL}/api/services`;
       let method = isEditingService ? "PUT" : "POST";
 
       if (isInstantRequest) {
-        url = "/api/services/instant";
+        url = `${API_URL}/api/services/instant`;
         method = "POST";
       }
 
@@ -1184,7 +1186,7 @@ export default function App() {
     if (!window.confirm(isRTL ? "هل أنت متأكد من حذف هذا الطلب؟" : "Are you sure you want to delete this request?")) return;
 
     try {
-      const response = await fetch(`/api/services/${id}`, {
+      const response = await fetch(`${API_URL}/api/services/${id}`, {
         method: "DELETE",
         headers: {
           "Authorization": `Bearer ${authService.getToken()}`
@@ -1206,7 +1208,7 @@ export default function App() {
   const fetchChatHistory = async (userId: string) => {
     try {
       const token = authService.getToken();
-      const response = await fetch(`/api/messages/${userId}`, {
+      const response = await fetch(`${API_URL}/api/messages/${userId}`, {
         headers: { "Authorization": `Bearer ${token}` }
       });
       if (response.ok) {
@@ -1220,7 +1222,7 @@ export default function App() {
 
   const fetchWorkerReviews = async (workerId: string) => {
     try {
-      const response = await fetch(`/api/reviews/worker/${workerId}`);
+      const response = await fetch(`${API_URL}/api/reviews/worker/${workerId}`);
       if (response.ok) {
         const data = await response.json();
         setWorkerReviewsData(data);
@@ -1248,7 +1250,7 @@ export default function App() {
 
   const handleViewProfile = async (userId: string) => {
     try {
-      const response = await fetch(`/api/auth/user/${userId}`, {
+      const response = await fetch(`${API_URL}/api/auth/user/${userId}`, {
         headers: { "Authorization": `Bearer ${authService.getToken()}` }
       });
       if (response.ok) {
@@ -1287,7 +1289,7 @@ export default function App() {
   const handleReviewUser = async (targetUserId: string, rating: number, comment: string) => {
     if (!currentUser) return;
     try {
-      const response = await fetch("/api/messages/review", {
+      const response = await fetch(`${API_URL}/api/messages/review`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -1309,7 +1311,7 @@ export default function App() {
   const handleUpdateAvailability = async () => {
     try {
       const token = authService.getToken();
-      const response = await fetch("/api/availability", {
+      const response = await fetch(`${API_URL}/api/availability`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -1441,7 +1443,7 @@ export default function App() {
           fetchNotifications();
 
           if (user.role === 'worker') {
-            const res = await fetch("/api/availability/me", {
+              const res = await fetch(`${API_URL}/api/availability/me`, {
               headers: { "Authorization": `Bearer ${token}` }
             });
             if (res.ok) {
@@ -1591,7 +1593,7 @@ export default function App() {
 
   const handleVerifyEmail = async (token: string) => {
     try {
-      const res = await fetch(`/api/auth/verify-email/${token}`);
+      const res = await fetch(`${API_URL}/api/auth/verify-email/${token}`);
       const data = await res.json();
       if (res.ok) {
         showToast(isRTL ? "تم تفعيل الحساب بنجاح، يمكنك الدخول الآن" : "Account verified successfully, you can now log in");
@@ -1608,7 +1610,7 @@ export default function App() {
   const handleForgotPassword = async () => {
     setIsAuthLoading(true);
     try {
-      const res = await fetch('/api/auth/forgot-password', {
+      const res = await fetch(`${API_URL}/api/auth/forgot-password`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email })
@@ -1631,7 +1633,7 @@ export default function App() {
     const token = new URLSearchParams(window.location.search).get('token');
     setIsAuthLoading(true);
     try {
-      const res = await fetch('/api/auth/reset-password', {
+      const res = await fetch(`${API_URL}/api/auth/reset-password`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ token, newPassword: password })
@@ -1713,7 +1715,7 @@ export default function App() {
     setIsAuthLoading(true);
     setEmailError('');
     try {
-      const response = await fetch('/api/auth/check-email', {
+      const response = await fetch(`${API_URL}/api/auth/check-email`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email })
@@ -1761,7 +1763,7 @@ export default function App() {
 
   const handleDeleteAccount = async () => {
     try {
-      const response = await fetch("/api/auth/account", {
+      const response = await fetch(`${API_URL}/api/auth/account`, {
         method: "DELETE",
         headers: {
           "Authorization": `Bearer ${authService.getToken()}`
@@ -3442,7 +3444,7 @@ export default function App() {
                               } else if (notif.type === 'new_request' || notif.type === 'request_assigned' || notif.type === 'request_completed') {
                                 setShowNotification(false);
                                 if (notif.data?.requestId) {
-                                  fetch(`/api/services/${notif.data.requestId}`, {
+                                  fetch(`${API_URL}/api/services/${notif.data.requestId}`, {
                                     headers: { "Authorization": `Bearer ${authService.getToken()}` }
                                   })
                                   .then(res => res.json())
@@ -3976,7 +3978,7 @@ export default function App() {
                           <button
                             onClick={async () => {
                               try {
-                                const response = await fetch(`/api/services/${req.id}/assign`, {
+                                const response = await fetch(`${API_URL}/api/services/${req.id}/assign`, {
                                   method: 'PATCH',
                                   headers: { "Authorization": `Bearer ${authService.getToken()}` }
                                 });
@@ -4501,7 +4503,7 @@ export default function App() {
                 <button
                   onClick={async () => {
                     try {
-                      const response = await fetch("/api/availability", {
+                      const response = await fetch(`${API_URL}/api/availability`, {
                         method: "POST",
                         headers: {
                           "Content-Type": "application/json",
