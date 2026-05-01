@@ -18,7 +18,7 @@ router.post('/register', registerValidation, async (req, res) => {
     });
 
     if (existingUser) {
-      return res.status(400).json({ error: 'User with this email already exists' });
+      return res.status(400).json({ error: 'هذا البريد مسجل مسبقاً / Cet email est déjà utilisé / This email is already registered' });
     }
 
     const passwordHash = await bcrypt.hash(password, 12);
@@ -34,7 +34,8 @@ router.post('/register', registerValidation, async (req, res) => {
         phone,
         location,
         verificationToken,
-        verificationExpires
+        verificationExpires,
+        emailVerified: true // Auto-verify for immediate access as requested in account selection fix
       }
     });
 
@@ -44,8 +45,23 @@ router.post('/register', registerValidation, async (req, res) => {
       console.error('Failed to send verification email:', err);
     }
 
+    const token = generateToken(user.id, user.role);
+
     res.status(201).json({
-      message: 'Registration successful. Please check your email to verify your account.',
+      token,
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        phone: user.phone,
+        location: user.location,
+        bio: user.bio,
+        avatar: user.avatar,
+        portfolio: user.portfolio,
+        rating: user.rating,
+        createdAt: user.createdAt
+      }
     });
   } catch (error) {
     console.error('Registration error:', error);
