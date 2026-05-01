@@ -14,6 +14,8 @@ import messageRoutes from "./src/routes/messages";
 import reviewRoutes from "./src/routes/reviews";
 import notificationRoutes from "./src/routes/notifications";
 import availabilityRoutes from "./src/routes/availability";
+import applicationRoutes from "./src/routes/applications";
+import offerRoutes from "./src/routes/offers";
 import { prisma } from "./src/db";
 import { sendNotification } from "./src/services/notificationService";
 import { errorHandler } from "./src/middleware/errorHandler";
@@ -190,6 +192,8 @@ async function startServer() {
   app.use("/api/reviews", reviewRoutes);
   app.use("/api/notifications", notificationRoutes);
   app.use("/api/availability", availabilityRoutes);
+  app.use("/api/applications", applicationRoutes);
+  app.use("/api/offers", offerRoutes);
 
   // Global Error Handler
   app.use(errorHandler);

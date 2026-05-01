@@ -754,6 +754,13 @@ export default function App() {
   const [showLocationModal, setShowLocationModal] = useState(false);
   const [contactTarget, setContactTarget] = useState<any>(null);
   const [activeItem, setActiveItem] = useState<any>(null);
+  const [showSendOfferModal, setShowSendOfferModal] = useState(false);
+  const [offerData, setOfferData] = useState({
+    price: '',
+    timing: '',
+    message: ''
+  });
+  const [myApplications, setMyApplications] = useState<any[]>([]);
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [showInstallBtn, setShowInstallBtn] = useState(false);
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
@@ -982,7 +989,7 @@ export default function App() {
 
   const fetchIncomingOffers = async () => {
     try {
-      const response = await fetch("/api/availability/my-offers", {
+      const response = await fetch("/api/offers/my", {
         headers: { "Authorization": `Bearer ${authService.getToken()}` }
       });
       if (response.ok) {
@@ -994,18 +1001,30 @@ export default function App() {
     }
   };
 
-  const handleUpdateApplicationStatus = async (applicationId: string, status: string, requestId: string) => {
+  const fetchMyApplications = async () => {
     try {
-      const response = await fetch(`/api/services/applications/${applicationId}/status`, {
-        method: 'PATCH',
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${authService.getToken()}`
-        },
-        body: JSON.stringify({ status })
+      const response = await fetch("/api/applications/my", {
+        headers: { "Authorization": `Bearer ${authService.getToken()}` }
       });
       if (response.ok) {
-        showToast(status === 'accepted' ? (isRTL ? "تم قبول المتقدم بنجاح" : "Applicant accepted") : (isRTL ? "تم رفض المتقدم" : "Applicant rejected"));
+        const data = await response.json();
+        setMyApplications(data);
+      }
+    } catch (err) {
+      console.error("Error fetching my applications:", err);
+    }
+  };
+
+  const handleUpdateApplicationStatus = async (applicationId: string, status: string, requestId: string) => {
+    try {
+      const response = await fetch(`/api/applications/${applicationId}/${status}`, {
+        method: 'PATCH',
+        headers: {
+          "Authorization": `Bearer ${authService.getToken()}`
+        }
+      });
+      if (response.ok) {
+        showToast(status === 'accept' ? (isRTL ? "تم قبول المتقدم بنجاح" : "Applicant accepted") : (isRTL ? "تم رفض المتقدم" : "Applicant rejected"));
         fetchApplicants(requestId);
         fetchMyRequests();
       }
@@ -1016,16 +1035,14 @@ export default function App() {
 
   const handleUpdateOfferStatus = async (offerId: string, status: string) => {
     try {
-      const response = await fetch(`/api/availability/offers/${offerId}/status`, {
+      const response = await fetch(`/api/offers/${offerId}/${status}`, {
         method: 'PATCH',
         headers: {
-          "Content-Type": "application/json",
           "Authorization": `Bearer ${authService.getToken()}`
-        },
-        body: JSON.stringify({ status })
+        }
       });
       if (response.ok) {
-        showToast(status === 'accepted' ? (isRTL ? "تم قبول العرض بنجاح" : "Offer accepted") : (isRTL ? "تم رفض العرض" : "Offer rejected"));
+        showToast(status === 'accept' ? (isRTL ? "تم قبول العرض بنجاح" : "Offer accepted") : (isRTL ? "تم رفض العرض" : "Offer rejected"));
         fetchIncomingOffers();
         fetchMyRequests();
       }
@@ -1034,25 +1051,51 @@ export default function App() {
     }
   };
 
-  const handleApplyToJob = async (requestId: string, price: string, description: string) => {
+  const handleApplyToJob = async (serviceRequestId: string) => {
     try {
-      const response = await fetch(`/api/services/${requestId}/apply`, {
+      const response = await fetch(`/api/applications`, {
         method: 'POST',
         headers: {
           "Content-Type": "application/json",
           "Authorization": `Bearer ${authService.getToken()}`
         },
-        body: JSON.stringify({ price, description })
+        body: JSON.stringify({ serviceRequestId })
       });
       if (response.ok) {
         showToast(isRTL ? "تم تقديم طلبك بنجاح" : "Application submitted successfully");
-        fetchMyRequests();
+        fetchMyApplications();
       } else {
         const err = await response.json();
         showToast(err.error || "Failed to apply", "error");
       }
     } catch (err) {
       console.error("Error applying for job:", err);
+    }
+  };
+
+  const handleSendOffer = async () => {
+    try {
+      const response = await fetch("/api/offers", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${authService.getToken()}`
+        },
+        body: JSON.stringify({
+          availabilityId: activeItem.id,
+          ...offerData
+        })
+      });
+      if (response.ok) {
+        showToast(isRTL ? "تم إرسال عرضك بنجاح" : "Offer sent successfully");
+        setShowSendOfferModal(false);
+        setOfferData({ price: '', timing: '', message: '' });
+      } else {
+        const err = await response.json();
+        showToast(err.error || "Failed to send offer", "error");
+      }
+    } catch (err) {
+      console.error("Error sending offer:", err);
     }
   };
 
@@ -1317,7 +1360,10 @@ export default function App() {
     }
     if (activeTab === "activity" && currentUser) {
       fetchMyRequests();
-      if (currentUser.role === 'worker') fetchIncomingOffers();
+      if (currentUser.role === 'worker') {
+        fetchIncomingOffers();
+        fetchMyApplications();
+      }
     }
     if (activeTab === "feed" && currentUser) {
       const filters = { category: category !== 'all' ? category : undefined, wilaya: wilaya ? wilaya.split(' - ')[1] : undefined };
@@ -2608,17 +2654,20 @@ export default function App() {
                                 <img src={offer.employer.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${offer.employer.name}`} className="w-10 h-10 rounded-full" />
                                 <div>
                                   <h4 className="font-black text-aiko-navy">{offer.employer.name}</h4>
-                                  <p className="text-[10px] font-bold text-aiko-navy/40">{offer.request?.title || (isRTL ? "عرض عمل" : "Job Offer")}</p>
+                                  <p className="text-[10px] font-bold text-aiko-navy/40">{offer.message || (isRTL ? "عرض عمل" : "Job Offer")}</p>
                                 </div>
                               </div>
                               <div className="text-right">
-                                <span className="text-sm font-black text-aiko-teal">{offer.request?.budget || (isRTL ? "ميزانية مفتوحة" : "Open Budget")}</span>
+                                <span className="text-sm font-black text-aiko-teal">{offer.price} DA</span>
                               </div>
+                            </div>
+                            <div className="px-2">
+                              <p className="text-[10px] text-aiko-navy/60"><strong>{isRTL ? "التوقيت:" : "Timing:"}</strong> {offer.timing}</p>
                             </div>
                             {offer.status === 'pending' ? (
                               <div className="flex gap-2">
-                                <button onClick={() => handleUpdateOfferStatus(offer.id, 'accepted')} className="flex-1 bg-aiko-teal text-white py-2 rounded-xl text-[10px] font-black uppercase tracking-widest">{isRTL ? "قبول" : "Accept"}</button>
-                                <button onClick={() => handleUpdateOfferStatus(offer.id, 'rejected')} className="flex-1 bg-aiko-gray-100 text-aiko-navy/40 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest">{isRTL ? "رفض" : "Reject"}</button>
+                                <button onClick={() => handleUpdateOfferStatus(offer.id, 'accept')} className="flex-1 bg-aiko-teal text-white py-2 rounded-xl text-[10px] font-black uppercase tracking-widest">{isRTL ? "قبول" : "Accept"}</button>
+                                <button onClick={() => handleUpdateOfferStatus(offer.id, 'reject')} className="flex-1 bg-aiko-gray-100 text-aiko-navy/40 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest">{isRTL ? "رفض" : "Reject"}</button>
                               </div>
                             ) : (
                               <div className="text-center py-1 bg-aiko-gray-50 rounded-lg text-[10px] font-black uppercase tracking-widest text-aiko-navy/30">
@@ -2630,7 +2679,29 @@ export default function App() {
                       </div>
                     )}
 
-                    <SectionTitle title={userRole === 'worker' ? (isRTL ? "طلبات التقديم" : "Job Applications") : t.nav_myjobs} />
+                    {userRole === 'worker' && myApplications.length > 0 && (
+                      <div className="space-y-2 mb-8">
+                        <SectionTitle title={isRTL ? "طلبات التقديم" : "My Applications"} />
+                        {myApplications.map(app => (
+                          <div key={app.id} className="bento-card p-2 border-l-4 border-aiko-orange flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                              <div className="w-10 h-10 bg-aiko-gray-100 rounded-full overflow-hidden">
+                                <img src={app.request.employer.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${app.request.employer.name}`} />
+                              </div>
+                              <div>
+                                <h4 className="font-black text-aiko-navy">{app.request.title}</h4>
+                                <p className="text-[10px] font-bold text-aiko-navy/40">{app.request.employer.name}</p>
+                              </div>
+                            </div>
+                            <div className={`text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full ${app.status === 'accepted' ? 'bg-green-100 text-green-600' : app.status === 'rejected' ? 'bg-red-100 text-red-600' : 'bg-yellow-100 text-yellow-600'}`}>
+                              {app.status === 'pending' ? (isRTL ? "قيد الانتظار" : "Pending") : app.status === 'accepted' ? (isRTL ? "مقبول" : "Accepted") : (isRTL ? "مرفوض" : "Rejected")}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    <SectionTitle title={userRole === 'worker' ? (isRTL ? "المهام المسندة" : "Assigned Tasks") : t.nav_myjobs} />
                     {myRequests.map((req) => (
                       <div key={req.id} className="flex flex-col gap-2">
                         <div className={`bento-card p-2 border-l-4 ${req.status === 'completed' ? 'border-aiko-teal' : 'border-aiko-orange'} flex items-center justify-between`}>
@@ -2731,8 +2802,8 @@ export default function App() {
                                 <p className="text-[10px] font-bold text-aiko-navy/60 leading-relaxed">{app.description}</p>
                                 {app.status === 'pending' ? (
                                   <div className="flex gap-2">
-                                    <button onClick={() => handleUpdateApplicationStatus(app.id, 'accepted', req.id)} className="flex-1 bg-aiko-teal text-white py-2 rounded-xl text-[8px] font-black uppercase tracking-widest">{isRTL ? "قبول" : "Accept"}</button>
-                                    <button onClick={() => handleUpdateApplicationStatus(app.id, 'rejected', req.id)} className="flex-1 bg-aiko-gray-100 text-aiko-navy/40 py-2 rounded-xl text-[8px] font-black uppercase tracking-widest">{isRTL ? "رفض" : "Reject"}</button>
+                                    <button onClick={() => handleUpdateApplicationStatus(app.id, 'accept', req.id)} className="flex-1 bg-aiko-teal text-white py-2 rounded-xl text-[8px] font-black uppercase tracking-widest">{isRTL ? "قبول" : "Accept"}</button>
+                                    <button onClick={() => handleUpdateApplicationStatus(app.id, 'reject', req.id)} className="flex-1 bg-aiko-gray-100 text-aiko-navy/40 py-2 rounded-xl text-[8px] font-black uppercase tracking-widest">{isRTL ? "رفض" : "Reject"}</button>
                                   </div>
                                 ) : (
                                   <div className="text-center py-1 bg-aiko-gray-50 rounded-lg text-[8px] font-black uppercase tracking-widest text-aiko-navy/30">
@@ -3283,29 +3354,10 @@ export default function App() {
                         <button
                           onClick={() => {
                             if (userRole === 'worker') {
-                              const price = prompt(isRTL ? "أدخل سعرك (DA):" : "Enter your price (DA):");
-                              const desc = prompt(isRTL ? "أدخل وصفاً لطلبك:" : "Enter a description for your application:");
-                              if (price && desc) {
-                                handleApplyToJob(activeItem.id, price, desc);
-                                setActiveItem(null);
-                              }
+                              handleApplyToJob(activeItem.id);
+                              setActiveItem(null);
                             } else {
-                                if (activeItem.workerId) {
-                                    const requestId = prompt(isRTL ? "أدخل معرف الوظيفة (اختياري):" : "Enter Request ID (optional):");
-                                    fetch(`/api/availability/${activeItem.id}/offer`, {
-                                        method: 'POST',
-                                        headers: {
-                                            "Content-Type": "application/json",
-                                            "Authorization": `Bearer ${authService.getToken()}`
-                                        },
-                                        body: JSON.stringify({ requestId })
-                                    }).then(res => {
-                                        if (res.ok) {
-                                            showToast(isRTL ? "تم إرسال العرض بنجاح" : "Offer sent successfully");
-                                            setActiveItem(null);
-                                        }
-                                    });
-                                }
+                              setShowSendOfferModal(true);
                             }
                           }}
                           className="btn-primary w-full py-3 text-sm uppercase tracking-[0.2em]"
@@ -3501,6 +3553,75 @@ export default function App() {
 
             <AnimatePresence>
                 {showLocationModal && <LocationModal />}
+            </AnimatePresence>
+
+            {/* Send Offer Modal */}
+            <AnimatePresence>
+              {showSendOfferModal && (
+                <div className="fixed inset-0 z-[300] flex items-center justify-center p-2">
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    onClick={() => setShowSendOfferModal(false)}
+                    className="absolute inset-0 bg-aiko-navy/60 backdrop-blur-md"
+                  />
+                  <motion.div
+                    initial={{ scale: 0.9, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    exit={{ scale: 0.9, opacity: 0 }}
+                    className="relative w-full max-w-sm bg-white rounded-[24px] p-4 shadow-2xl space-y-3"
+                  >
+                    <div className="flex flex-col items-center text-center space-y-2 mb-2">
+                       <div className="w-16 h-16 bg-aiko-teal-bg text-aiko-teal rounded-2xl flex items-center justify-center mb-2">
+                          <Plus size={32} />
+                       </div>
+                       <h3 className="text-2xl font-black text-aiko-navy">{isRTL ? "إرسال عرض" : "Send Offer"}</h3>
+                       <p className="text-sm font-bold text-aiko-navy/30">{isRTL ? "قدم عرض عمل لهذا العامل" : "Send a job offer to this worker"}</p>
+                    </div>
+
+                    <div className="space-y-2">
+                      <FormInput
+                        label={isRTL ? "السعر المقترح (دج)" : "Proposed Price (DA)"}
+                        type="number"
+                        value={offerData.price}
+                        onChange={(val: string) => setOfferData({...offerData, price: val})}
+                        icon={Sparkles}
+                      />
+                      <FormInput
+                        label={isRTL ? "التوقيت المقترح" : "Proposed Timing"}
+                        placeholder={isRTL ? "مثال: غداً الساعة 10 صباحاً" : "e.g. Tomorrow at 10 AM"}
+                        value={offerData.timing}
+                        onChange={(val: string) => setOfferData({...offerData, timing: val})}
+                        icon={Clock}
+                      />
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-black uppercase tracking-widest text-aiko-navy/40 px-4">{isRTL ? "رسالة قصيرة (اختياري)" : "Short Message (Optional)"}</label>
+                        <textarea
+                          value={offerData.message}
+                          onChange={(e) => setOfferData({ ...offerData, message: e.target.value })}
+                          className="w-full bg-aiko-gray-50 rounded-2xl p-2 text-sm font-bold text-aiko-navy focus:outline-none focus:border-aiko-teal border-2 border-transparent transition-all min-h-[80px] resize-none"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => setShowSendOfferModal(false)}
+                        className="flex-1 py-3 rounded-2xl bg-aiko-gray-100 text-aiko-navy font-black text-sm uppercase tracking-widest hover:bg-aiko-gray-200 transition-all"
+                      >
+                        {isRTL ? "إلغاء" : "Cancel"}
+                      </button>
+                      <button
+                        onClick={handleSendOffer}
+                        className="flex-[2] py-3 rounded-2xl bg-aiko-teal text-white font-black text-sm uppercase tracking-widest hover:bg-aiko-teal-dark transition-all shadow-xl shadow-aiko-teal/20"
+                      >
+                        {isRTL ? "إرسال" : "Send"}
+                      </button>
+                    </div>
+                  </motion.div>
+                </div>
+              )}
             </AnimatePresence>
 
             {/* Delete Account Confirmation Modal */}
