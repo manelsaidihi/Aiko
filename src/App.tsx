@@ -584,7 +584,7 @@ const NavItem = ({ icon: Icon, label, active, onClick, count, i18nKey, avatar }:
   </button>
 );
 
-const JobCard = ({ title, company, location, price, time, type, icon: Icon, onApply, lang, onContact, urgent, onViewProfile }: any) => {
+const JobCard = ({ title, company, location, price, time, type, icon: Icon, onApply, lang, onContact, urgent, onViewProfile, userRole, hasApplied }: any) => {
   const isRTL = lang === 'ar';
   const t = translations[lang as Language];
   
@@ -638,20 +638,22 @@ const JobCard = ({ title, company, location, price, time, type, icon: Icon, onAp
           >
             <UserIcon size={18} />
           </button>
-          <div 
-            onClick={(e) => { e.stopPropagation(); onApply(); }}
-            className="bg-aiko-teal text-white text-[10px] font-black uppercase tracking-widest px-4 py-2 rounded-xl hover:bg-aiko-teal-dark transition-colors"
-            data-i18n="apply_btn"
-          >
-            {t.apply_btn}
-          </div>
+          {userRole === 'worker' && (
+            <div
+              onClick={(e) => { e.stopPropagation(); if (!hasApplied) onApply(); }}
+              className={`${hasApplied ? 'bg-aiko-gray-200 text-aiko-navy/30' : 'bg-aiko-teal text-white hover:bg-aiko-teal-dark'} text-[10px] font-black uppercase tracking-widest px-4 py-2 rounded-xl transition-colors`}
+              data-i18n={hasApplied ? "applied_btn" : "apply_btn"}
+            >
+              {hasApplied ? t.applied_btn : t.apply_btn}
+            </div>
+          )}
         </div>
       </div>
     </motion.div>
   );
 };
 
-const WorkerCard = ({ name, skill, rating, price, distance, icon: Icon, onOffer, lang, onContact, onViewProfile }: any) => {
+const WorkerCard = ({ name, skill, rating, price, distance, icon: Icon, onOffer, lang, onContact, onViewProfile, userRole }: any) => {
   const isRTL = lang === 'ar';
   const t = translations[lang as Language];
   
@@ -703,12 +705,14 @@ const WorkerCard = ({ name, skill, rating, price, distance, icon: Icon, onOffer,
       </div>
       
       <div className="flex items-center justify-between pt-2 border-t border-aiko-gray-100 gap-2">
-        <button 
-          onClick={(e) => { e.stopPropagation(); onOffer(); }}
-          className="flex-1 bg-aiko-orange text-white text-[8px] font-black uppercase tracking-widest py-2 rounded-xl hover:bg-aiko-orange-dark transition-all active:scale-95"
-        >
-          {isRTL ? "عرض" : "Offer"}
-        </button>
+        {userRole === 'employer' && (
+          <button
+            onClick={(e) => { e.stopPropagation(); onOffer(); }}
+            className="flex-1 bg-aiko-orange text-white text-[8px] font-black uppercase tracking-widest py-2 rounded-xl hover:bg-aiko-orange-dark transition-all active:scale-95"
+          >
+            {isRTL ? "عرض" : "Offer"}
+          </button>
+        )}
         <button 
           onClick={(e) => { e.stopPropagation(); onContact(); }}
           className="w-8 h-8 bg-aiko-gray-100 text-aiko-navy/20 flex items-center justify-center rounded-xl hover:bg-aiko-teal-bg hover:text-aiko-teal transition-all active:scale-95"
@@ -2502,12 +2506,17 @@ export default function App() {
                             type={job.category}
                             icon={SERVICE_CATEGORIES.find(c => c.id === job.category)?.icon || Hammer}
                             lang={lang}
-                            onApply={() => handleOpenItem(job)}
+                              onApply={() => {
+                                const catIcon = SERVICE_CATEGORIES.find(c => c.id === job.category)?.icon || Hammer;
+                                handleOpenItem({ ...job, icon: catIcon });
+                              }}
                             onContact={() => {
                               setContactTarget(job);
                               setShowContactModal(true);
                             }}
                             onViewProfile={() => handleViewProfile(job.employer.id)}
+                              userRole={userRole}
+                              hasApplied={myApplications.some(app => app.serviceRequestId === job.id)}
                           />
                         ))}
                         {filteredJobs.length === 0 && (
@@ -2588,51 +2597,26 @@ export default function App() {
 
                       <div className="grid grid-cols-2 gap-2">
                         {filteredWorkers.map(avail => (
-                          <motion.div
+                          <WorkerCard
                             key={avail.id}
-                            initial={{ opacity: 0, y: 10 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            className="bento-card p-2 space-y-2 group hover:shadow-md transition-all relative overflow-hidden"
-                          >
-                            <div className="flex items-start justify-between gap-1">
-                              <div className="flex-1 min-w-0">
-                                <div onClick={() => handleViewProfile(avail.worker.id)} className="cursor-pointer">
-                                  <h4 className="text-[12px] font-black text-aiko-navy hover:text-aiko-teal transition-colors truncate">{avail.worker.name}</h4>
-                                  <div className="flex items-center gap-0.5">
-                                    <Star size={8} fill="#F5A623" className="text-aiko-orange" />
-                                    <span className="text-[8px] font-black text-aiko-navy/30">{avail.worker.rating || "5.0"}</span>
-                                  </div>
-                                </div>
-                              </div>
-                              <div
-                                onClick={() => handleViewProfile(avail.worker.id)}
-                                className="w-10 h-10 bg-aiko-teal-bg text-aiko-teal rounded-lg flex items-center justify-center cursor-pointer overflow-hidden flex-shrink-0"
-                              >
-                                <img
-                                  src={avail.worker.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${avail.worker.name}`}
-                                  className="w-full h-full object-cover"
-                                  alt=""
-                                />
-                              </div>
-                            </div>
-
-                            <div className="space-y-1">
-                              <h5 className="font-black text-[10px] text-aiko-navy truncate">{avail.title}</h5>
-                              <p className="text-[9px] font-medium text-aiko-navy/40 leading-tight line-clamp-2">
-                                {avail.description}
-                              </p>
-                            </div>
-
-                            <div className="flex items-center justify-between pt-1 border-t border-aiko-gray-100">
-                               <span className="text-[10px] font-black text-aiko-teal">{avail.hourlyRate} DA</span>
-                               <button
-                                onClick={() => handleOpenChat(avail.worker)}
-                                className="w-6 h-6 bg-aiko-teal text-white rounded-lg flex items-center justify-center hover:bg-aiko-teal-dark transition-all"
-                              >
-                                <MessageCircle size={12} />
-                              </button>
-                            </div>
-                          </motion.div>
+                            name={avail.worker.name}
+                            skill={avail.title}
+                            rating={avail.worker.rating || 5.0}
+                            price={`${avail.hourlyRate} DA`}
+                            distance={wilaya || (isRTL ? "قريب منك" : "Nearby")}
+                            icon={SERVICE_CATEGORIES.find(c => c.id === avail.category)?.icon || UserIcon}
+                            lang={lang}
+                            onOffer={() => {
+                              const catIcon = SERVICE_CATEGORIES.find(c => c.id === avail.category)?.icon || UserIcon;
+                              handleOpenItem({ ...avail, name: avail.worker.name, icon: catIcon });
+                            }}
+                            onContact={() => {
+                              setContactTarget(avail.worker);
+                              setShowContactModal(true);
+                            }}
+                            onViewProfile={() => handleViewProfile(avail.worker.id)}
+                            userRole={userRole}
+                          />
                         ))}
                         {availableWorkers.length === 0 && (
                           <div className="p-12 text-center text-aiko-navy/30 font-bold border-2 border-dashed border-aiko-gray-100 rounded-[16px]">
@@ -3413,7 +3397,7 @@ export default function App() {
                         }}
                         className="w-24 h-24 bg-aiko-teal-bg text-aiko-teal rounded-[16px] flex items-center justify-center cursor-pointer hover:scale-105 transition-transform"
                       >
-                        <activeItem.icon size={48} />
+                        {activeItem.icon ? <activeItem.icon size={48} /> : <UserIcon size={48} />}
                       </div>
                       <div>
                         <h3 className="text-2xl font-black text-aiko-navy">{activeItem.title || activeItem.name}</h3>
@@ -3441,20 +3425,32 @@ export default function App() {
                       </div>
 
                       <div className="w-full space-y-3">
-                        <button
-                          onClick={() => {
-                            if (userRole === 'worker') {
+                        {userRole === 'worker' && activeItem.employerId && (
+                          <button
+                            onClick={() => {
+                              if (myApplications.some(app => app.serviceRequestId === activeItem.id)) {
+                                showToast(isRTL ? "لقد تقدمت بالفعل" : "Already applied", "error");
+                                return;
+                              }
                               handleApplyToJob(activeItem.id);
                               setActiveItem(null);
-                            } else {
+                            }}
+                            className={`w-full py-3 text-sm font-black uppercase tracking-[0.2em] rounded-2xl transition-all ${myApplications.some(app => app.serviceRequestId === activeItem.id) ? 'bg-aiko-gray-100 text-aiko-navy/20 cursor-not-allowed' : 'btn-primary'}`}
+                          >
+                            {myApplications.some(app => app.serviceRequestId === activeItem.id) ? (isRTL ? "تم التقديم" : "Applied") : (isRTL ? "تقدم لهذه الوظيفة" : "Apply for this job")}
+                          </button>
+                        )}
+                        {userRole === 'employer' && activeItem.workerId && (
+                          <button
+                            onClick={() => {
                               setShowSendOfferModal(true);
-                              setActiveItem(activeItem); // Ensure it's set
-                            }
-                          }}
-                          className="btn-primary w-full py-3 text-sm uppercase tracking-[0.2em]"
-                        >
-                          {userRole === 'worker' ? (isRTL ? "تقدم لهذه الوظيفة" : "Apply for this job") : (isRTL ? "إرسال عرض" : "Send Offer")}
-                        </button>
+                              // activeItem is already set
+                            }}
+                            className="btn-primary w-full py-3 text-sm font-black uppercase tracking-[0.2em]"
+                          >
+                            {isRTL ? "إرسال عرض" : "Send Offer"}
+                          </button>
+                        )}
                         <button className="w-full py-2 text-xs font-black text-aiko-navy/30 uppercase tracking-widest hover:text-aiko-navy transition-colors">
                           {isRTL ? "حفظ للمراجعة" : "Save for Review"}
                         </button>
@@ -3517,35 +3513,40 @@ export default function App() {
 
                               if (notif.type === 'new_message' && notif.data?.senderId) {
                                 setShowNotification(false);
-                                // Fetch full user data before opening chat
-                                fetch(`/api/auth/user/${notif.data.senderId}`, {
+                                fetch(`${API_URL}/api/auth/user/${notif.data.senderId}`, {
                                   headers: { "Authorization": `Bearer ${authService.getToken()}` }
                                 })
                                 .then(res => res.json())
                                 .then(userData => {
-                                  if (userData && !userData.error) {
-                                    handleOpenChat(userData);
-                                  } else {
-                                    handleOpenChat({ id: notif.data.senderId, name: 'User' });
-                                  }
+                                  if (userData && !userData.error) handleOpenChat(userData);
+                                  else handleOpenChat({ id: notif.data.senderId, name: 'User' });
                                 })
                                 .catch(() => handleOpenChat({ id: notif.data.senderId, name: 'User' }));
-                              } else if (notif.type === 'new_request' || notif.type === 'request_assigned' || notif.type === 'request_completed') {
+                              } else if (notif.type === 'new_request') {
                                 setShowNotification(false);
-                                if (notif.data?.requestId) {
-                                  fetch(`${API_URL}/api/services/${notif.data.requestId}`, {
+                                setActiveTab('activity');
+                                if (userRole === 'employer') {
+                                  if (notif.data?.requestId) {
+                                    setActiveJobTab(prev => ({ ...prev, [notif.data.requestId]: 'applicants' }));
+                                    fetchApplicants(notif.data.requestId);
+                                  }
+                                } else {
+                                  setActiveActivityTab('offers');
+                                }
+                              } else if (notif.type === 'request_assigned' || notif.type === 'request_completed') {
+                                setShowNotification(false);
+                                if (notif.data?.senderId) {
+                                  fetch(`${API_URL}/api/auth/user/${notif.data.senderId}`, {
                                     headers: { "Authorization": `Bearer ${authService.getToken()}` }
                                   })
                                   .then(res => res.json())
-                                  .then(service => {
-                                    if (service && !service.error) {
-                                      const catIcon = SERVICE_CATEGORIES.find(c => c.id === service.category)?.icon || Hammer;
-                                      handleOpenItem({ ...service, icon: catIcon });
-                                    }
+                                  .then(userData => {
+                                    if (userData && !userData.error) handleOpenChat(userData);
                                   })
-                                  .catch(err => console.error("Error fetching service detail:", err));
+                                  .catch(err => console.error(err));
+                                } else {
+                                  setActiveTab('chat');
                                 }
-                                setActiveTab('activity');
                               } else if (notif.type === 'new_review') {
                                 setShowNotification(false);
                                 setActiveTab('profile');
