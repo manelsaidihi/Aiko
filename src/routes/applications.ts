@@ -16,6 +16,17 @@ router.post('/', authenticateRequest, async (req: AuthRequest, res: Response) =>
       return res.status(403).json({ error: 'Only workers can apply for jobs' });
     }
 
+    const existingApplication = await prisma.jobApplication.findFirst({
+      where: {
+        serviceRequestId,
+        workerId: userId!
+      }
+    });
+
+    if (existingApplication) {
+      return res.status(400).json({ error: 'You have already applied for this job' });
+    }
+
     const service = await prisma.serviceRequest.findUnique({
       where: { id: serviceRequestId }
     });
@@ -38,11 +49,11 @@ router.post('/', authenticateRequest, async (req: AuthRequest, res: Response) =>
       userId: service.employerId,
       type: 'new_request',
       title: 'تقديم جديد على وظيفتك',
-      body: `عامل جديد تقدم لوظيفة: ${service.title}`,
+      body: 'تقدم عامل جديد على وظيفتك',
       data: { requestId: serviceRequestId, applicationId: application.id }
     });
 
-    res.status(201).json(application);
+    res.status(201).json({ message: 'تم إرسال طلبك بنجاح', application });
   } catch (error) {
     console.error('Create application error:', error);
     res.status(500).json({ error: 'Internal server error' });
@@ -56,10 +67,10 @@ router.get('/my', authenticateRequest, async (req: AuthRequest, res: Response) =
     const applications = await prisma.jobApplication.findMany({
       where: { workerId: userId },
       include: {
-        request: {
+        serviceRequest: {
           include: {
             employer: {
-              select: { name: true, avatar: true }
+              select: { name: true, avatar: true, rating: true }
             }
           }
         }
@@ -73,6 +84,43 @@ router.get('/my', authenticateRequest, async (req: AuthRequest, res: Response) =
   }
 });
 
+// GET /api/applications/job/:serviceRequestId (employer)
+router.get('/job/:serviceRequestId', authenticateRequest, async (req: AuthRequest, res: Response) => {
+  try {
+    const { serviceRequestId } = req.params;
+    const userId = req.user?.id;
+
+    const service = await prisma.serviceRequest.findUnique({
+      where: { id: serviceRequestId }
+    });
+
+    if (!service || service.employerId !== userId) {
+      return res.status(403).json({ error: 'Unauthorized to view applicants' });
+    }
+
+    const applicants = await prisma.jobApplication.findMany({
+      where: { serviceRequestId },
+      include: {
+        worker: {
+          select: {
+            id: true,
+            name: true,
+            avatar: true,
+            rating: true,
+            bio: true,
+            skills: true
+          }
+        }
+      }
+    });
+
+    res.json(applicants);
+  } catch (error) {
+    console.error('Get applicants error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // PATCH /api/applications/:id/accept
 router.patch('/:id/accept', authenticateRequest, async (req: AuthRequest, res: Response) => {
   try {
@@ -81,10 +129,10 @@ router.patch('/:id/accept', authenticateRequest, async (req: AuthRequest, res: R
 
     const application = await prisma.jobApplication.findUnique({
       where: { id },
-      include: { request: true }
+      include: { serviceRequest: true }
     });
 
-    if (!application || application.request.employerId !== userId) {
+    if (!application || application.serviceRequest.employerId !== userId) {
       return res.status(403).json({ error: 'Unauthorized' });
     }
 
@@ -102,37 +150,28 @@ router.patch('/:id/accept', authenticateRequest, async (req: AuthRequest, res: R
       }
     });
 
-    // Reject other applications for the same request
-    await prisma.jobApplication.updateMany({
-      where: {
-        serviceRequestId: application.serviceRequestId,
-        id: { not: id }
-      },
-      data: { status: 'rejected' }
-    });
-
     // Notify worker
     const io = req.app.get('io');
     await sendNotification(io, {
       userId: application.workerId,
       type: 'request_assigned',
       title: 'تم قبول طلبك!',
-      body: `صاحب العمل قبل طلبك لوظيفة: ${application.request.title}`,
-      data: { requestId: application.serviceRequestId }
+      body: `صاحب العمل قبل طلبك لوظيفة: ${application.serviceRequest.title}`,
+      data: { requestId: application.serviceRequestId, senderId: userId }
     });
 
-    // Open chat
+    // Automatically open chat
     await prisma.message.create({
       data: {
         senderId: userId!,
         receiverId: application.workerId,
-        text: `مرحباً، لقد قبلت طلبك لوظيفة "${application.request.title}". دعنا نتحدث.`
+        text: `مرحباً، لقد قبلت طلبك لوظيفة "${application.serviceRequest.title}". دعنا نتحدث.`
       }
     });
 
     io.to(`user_${application.workerId}`).emit('new_message', {
       senderId: userId,
-      text: `مرحباً، لقد قبلت طلبك لوظيفة "${application.request.title}". دعنا نتحدث.`,
+      text: `مرحباً، لقد قبلت طلبك لوظيفة "${application.serviceRequest.title}". دعنا نتحدث.`,
       timestamp: new Date()
     });
 
@@ -151,10 +190,10 @@ router.patch('/:id/reject', authenticateRequest, async (req: AuthRequest, res: R
 
     const application = await prisma.jobApplication.findUnique({
       where: { id },
-      include: { request: true }
+      include: { serviceRequest: true }
     });
 
-    if (!application || application.request.employerId !== userId) {
+    if (!application || application.serviceRequest.employerId !== userId) {
       return res.status(403).json({ error: 'Unauthorized' });
     }
 
@@ -167,10 +206,10 @@ router.patch('/:id/reject', authenticateRequest, async (req: AuthRequest, res: R
     const io = req.app.get('io');
     await sendNotification(io, {
       userId: application.workerId,
-      type: 'request_completed', // Using existing type for rejection
+      type: 'request_completed',
       title: 'تم رفض طلبك',
-      body: `تم رفض طلبك للتقديم على: ${application.request.title}`,
-      data: { requestId: application.serviceRequestId }
+      body: `تم رفض طلبك للتقديم على: ${application.serviceRequest.title}`,
+      data: { requestId: application.serviceRequestId, senderId: userId }
     });
 
     res.json(updatedApplication);

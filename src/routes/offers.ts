@@ -29,7 +29,7 @@ router.post('/', authenticateRequest, async (req: AuthRequest, res: Response) =>
         employerId: userId!,
         workerId: availability.workerId,
         availabilityId,
-        price,
+        price: parseFloat(price),
         timing,
         message,
         status: 'pending'
@@ -38,16 +38,15 @@ router.post('/', authenticateRequest, async (req: AuthRequest, res: Response) =>
 
     // Notify worker
     const io = req.app.get('io');
-    const employer = await prisma.user.findUnique({ where: { id: userId! }, select: { name: true } });
     await sendNotification(io, {
       userId: availability.workerId,
       type: 'new_request',
       title: 'عرض عمل جديد!',
-      body: `لقد تلقيت عرض عمل جديد من ${employer?.name}`,
+      body: 'لديك عرض عمل جديد',
       data: { offerId: offer.id }
     });
 
-    res.status(201).json(offer);
+    res.status(201).json({ message: 'تم إرسال عرضك بنجاح', offer });
   } catch (error) {
     console.error('Send offer error:', error);
     res.status(500).json({ error: 'Internal server error' });
@@ -59,6 +58,10 @@ router.get('/my', authenticateRequest, async (req: AuthRequest, res: Response) =
   try {
     const userId = req.user?.id;
     const userRole = req.user?.role;
+
+    if (userRole !== 'worker') {
+      return res.status(403).json({ error: 'Only workers can view their offers' });
+    }
 
     const offers = await prisma.workerOffer.findMany({
       where: { workerId: userId },
@@ -84,8 +87,7 @@ router.patch('/:id/accept', authenticateRequest, async (req: AuthRequest, res: R
     const userId = req.user?.id;
 
     const offer = await prisma.workerOffer.findUnique({
-      where: { id },
-      include: { employer: true }
+      where: { id }
     });
 
     if (!offer || offer.workerId !== userId) {
@@ -99,16 +101,15 @@ router.patch('/:id/accept', authenticateRequest, async (req: AuthRequest, res: R
 
     // Notify employer
     const io = req.app.get('io');
-    const worker = await prisma.user.findUnique({ where: { id: userId! }, select: { name: true } });
     await sendNotification(io, {
       userId: offer.employerId,
       type: 'request_assigned',
       title: 'تم قبول عرضك!',
-      body: `العامل ${worker?.name} قبل عرضك.`,
-      data: { offerId: id }
+      body: 'تم قبول عرضك من قبل العامل',
+      data: { offerId: id, senderId: userId }
     });
 
-    // Open chat
+    // Automatically open chat
     await prisma.message.create({
       data: {
         senderId: userId!,
@@ -151,13 +152,12 @@ router.patch('/:id/reject', authenticateRequest, async (req: AuthRequest, res: R
 
     // Notify employer
     const io = req.app.get('io');
-    const worker = await prisma.user.findUnique({ where: { id: userId! }, select: { name: true } });
     await sendNotification(io, {
       userId: offer.employerId,
       type: 'request_completed',
       title: 'تم رفض عرضك',
-      body: `العامل ${worker?.name} رفض عرضك.`,
-      data: { offerId: id }
+      body: 'تم رفض عرضك من قبل العامل',
+      data: { offerId: id, senderId: userId }
     });
 
     res.json(updatedOffer);
