@@ -1,3 +1,5 @@
+import API_URL from '../config';
+
 export const authService = {
   getToken(): string | null {
     return localStorage.getItem('aiko_token');
@@ -13,7 +15,7 @@ export const authService = {
   },
 
   async login(email: string, password: string): Promise<any> {
-    const response = await fetch('/api/auth/login', {
+    const response = await fetch(`${API_URL}/api/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password }),
@@ -31,7 +33,7 @@ export const authService = {
   },
 
   async register(data: any): Promise<any> {
-    const response = await fetch('/api/auth/register', {
+    const response = await fetch(`${API_URL}/api/auth/register`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
@@ -52,7 +54,7 @@ export const authService = {
     const token = this.getToken();
     if (!token) throw new Error('No token found');
 
-    const response = await fetch('/api/auth/me', {
+    const response = await fetch(`${API_URL}/api/auth/me`, {
       headers: {
         'Authorization': `Bearer ${token}`
       }
@@ -70,7 +72,7 @@ export const authService = {
 
   async updateProfile(data: any): Promise<any> {
     const token = this.getToken();
-    const response = await fetch('/api/auth/profile', {
+    const response = await fetch(`${API_URL}/api/auth/profile`, {
       method: 'PATCH',
       headers: {
         'Content-Type': 'application/json',

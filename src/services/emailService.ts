@@ -8,7 +8,7 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
+const FRONTEND_URL = process.env.FRONTEND_URL || 'https://aiko-app.onrender.com';
 
 export const sendVerificationEmail = async (email: string, token: string) => {
   const verificationUrl = `${FRONTEND_URL}/verify-email?token=${token}`;
