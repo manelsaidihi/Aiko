@@ -273,7 +273,41 @@ router.get(['/me', '/users/me'], authenticateRequest, async (req: AuthRequest, r
   }
 });
 
-// GET /api/auth/user/:id
+// GET /api/auth/profile/:userId
+router.get('/profile/:userId', async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        phone: true,
+        bio: true,
+        wilaya: true,
+        municipality: true,
+        rating: true,
+        completedTasks: true,
+        avatar: true,
+        portfolio: true,
+        role: true,
+        createdAt: true
+      }
+    });
+
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    res.json(user);
+  } catch (error) {
+    console.error('Get profile error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// GET /api/auth/user/:id (deprecated in favor of /profile/:userId, kept for compatibility)
 router.get('/user/:id', authenticateRequest, async (req: AuthRequest, res) => {
   try {
     const { id } = req.params;
@@ -306,18 +340,16 @@ router.get('/user/:id', authenticateRequest, async (req: AuthRequest, res) => {
 router.patch('/profile', authenticateRequest, async (req: AuthRequest, res) => {
   try {
     const userId = req.user?.id;
-    const { name, email, phone, bio, location, avatar, portfolio } = req.body;
+    const { name, phone, bio, wilaya, municipality } = req.body;
 
     const updatedUser = await prisma.user.update({
       where: { id: userId },
       data: {
         name,
-        email,
         phone,
         bio,
-        location,
-        avatar,
-        portfolio
+        wilaya,
+        municipality
       }
     });
 
@@ -328,12 +360,97 @@ router.patch('/profile', authenticateRequest, async (req: AuthRequest, res) => {
       role: updatedUser.role,
       phone: updatedUser.phone,
       bio: updatedUser.bio,
-      location: updatedUser.location,
+      wilaya: updatedUser.wilaya,
+      municipality: updatedUser.municipality,
       avatar: updatedUser.avatar,
       portfolio: updatedUser.portfolio
     });
   } catch (error) {
     console.error('Update profile error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// PATCH /api/auth/avatar
+router.patch('/avatar', authenticateRequest, async (req: AuthRequest, res) => {
+  try {
+    const userId = req.user?.id;
+    const { avatar } = req.body;
+
+    const updatedUser = await prisma.user.update({
+      where: { id: userId },
+      data: { avatar }
+    });
+
+    res.json({ avatar: updatedUser.avatar });
+  } catch (error) {
+    console.error('Update avatar error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// POST /api/auth/portfolio
+router.post('/portfolio', authenticateRequest, async (req: AuthRequest, res) => {
+  try {
+    const userId = req.user?.id;
+    const { image } = req.body;
+
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { portfolio: true }
+    });
+
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    if (user.portfolio.length >= 10) {
+      return res.status(400).json({ error: 'Portfolio limit reached (max 10)' });
+    }
+
+    const updatedUser = await prisma.user.update({
+      where: { id: userId },
+      data: {
+        portfolio: {
+          push: image
+        }
+      }
+    });
+
+    res.json({ portfolio: updatedUser.portfolio });
+  } catch (error) {
+    console.error('Add to portfolio error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// DELETE /api/auth/portfolio/:index
+router.delete('/portfolio/:index', authenticateRequest, async (req: AuthRequest, res) => {
+  try {
+    const userId = req.user?.id;
+    const index = parseInt(req.params.index);
+
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { portfolio: true }
+    });
+
+    if (!user) return res.status(404).json({ error: 'User not found' });
+
+    const newPortfolio = [...user.portfolio];
+    if (index >= 0 && index < newPortfolio.length) {
+      newPortfolio.splice(index, 1);
+    } else {
+      return res.status(400).json({ error: 'Invalid index' });
+    }
+
+    const updatedUser = await prisma.user.update({
+      where: { id: userId },
+      data: {
+        portfolio: newPortfolio
+      }
+    });
+
+    res.json({ portfolio: updatedUser.portfolio });
+  } catch (error) {
+    console.error('Delete from portfolio error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
