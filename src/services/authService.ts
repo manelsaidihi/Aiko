@@ -15,11 +15,15 @@ export const authService = {
   },
 
   async login(email: string, password: string): Promise<any> {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000);
     const response = await fetch(`${API_URL}/api/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password }),
+      signal: controller.signal
     });
+    clearTimeout(timeoutId);
 
     if (!response.ok) {
       const error = await response.json();
@@ -33,11 +37,15 @@ export const authService = {
   },
 
   async register(data: any): Promise<any> {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000);
     const response = await fetch(`${API_URL}/api/auth/register`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
+      signal: controller.signal
     });
+    clearTimeout(timeoutId);
 
     if (!response.ok) {
       const error = await response.json();
@@ -54,11 +62,15 @@ export const authService = {
     const token = this.getToken();
     if (!token) throw new Error('No token found');
 
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000);
     const response = await fetch(`${API_URL}/api/auth/me`, {
       headers: {
         'Authorization': `Bearer ${token}`
-      }
+      },
+      signal: controller.signal
     });
+    clearTimeout(timeoutId);
 
     if (!response.ok) {
       this.clearToken();
@@ -72,6 +84,8 @@ export const authService = {
 
   async updateProfile(data: any): Promise<any> {
     const token = this.getToken();
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000);
     const response = await fetch(`${API_URL}/api/auth/profile`, {
       method: 'PATCH',
       headers: {
@@ -79,7 +93,9 @@ export const authService = {
         'Authorization': `Bearer ${token}`
       },
       body: JSON.stringify(data),
+      signal: controller.signal
     });
+    clearTimeout(timeoutId);
 
     if (!response.ok) {
       const error = await response.json();
