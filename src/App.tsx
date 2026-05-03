@@ -745,10 +745,10 @@ class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { has
           <h1 className="text-2xl font-black text-aiko-navy mb-2">عذراً، حدث خطأ غير متوقع</h1>
           <p className="text-aiko-navy/40 font-bold mb-6">يرجى المحاولة مرة أخرى أو إعادة تحميل الصفحة</p>
           <button
-            onClick={() => window.location.reload()}
+            onClick={() => this.setState({ hasError: false })}
             className="px-8 py-3 bg-aiko-teal text-white rounded-2xl font-black shadow-lg shadow-aiko-teal/20"
           >
-            إعادة تحميل التطبيق
+            إعادة المحاولة
           </button>
         </div>
       );
@@ -1447,7 +1447,8 @@ export default function App() {
   };
 
   const handleOpenItem = (item: any) => {
-    setActiveItem(item);
+    const icon = SERVICE_CATEGORIES.find(c => c.id === item.category)?.icon || Hammer;
+    setActiveItem({ ...item, icon });
   };
 
   const [selectedPortfolioImage, setSelectedPortfolioImage] = useState<string | null>(null);
@@ -3650,7 +3651,7 @@ export default function App() {
                         }}
                         className="w-24 h-24 bg-aiko-teal-bg text-aiko-teal rounded-[16px] flex items-center justify-center cursor-pointer hover:scale-105 transition-transform"
                       >
-                        <activeItem.icon size={48} />
+                        {activeItem.icon ? <activeItem.icon size={48} /> : <Hammer size={48} />}
                       </div>
                       <div>
                         <h3 className="text-2xl font-black text-aiko-navy">{activeItem.title || activeItem.name}</h3>
