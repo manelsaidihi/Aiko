@@ -1160,20 +1160,35 @@ export default function App() {
   };
 
   const handleApply = async (serviceRequestId: string) => {
+    if (!serviceRequestId) {
+      alert('خطأ: معرف الوظيفة غير موجود');
+      return;
+    }
     try {
-      const response = await fetch(`${API_URL}/api/applications`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('aiko_token')}`
-        },
-        body: JSON.stringify({ serviceRequestId })
-      });
+      const token = localStorage.getItem('aiko_token');
+      if (!token) {
+        alert('يجب تسجيل الدخول أولاً');
+        return;
+      }
+      const response = await fetch(
+        `${window.location.origin}/api/applications`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({ serviceRequestId })
+        }
+      );
+      const data = await response.json();
       if (response.ok) {
-        alert('تم إرسال طلبك بنجاح');
+        alert('تم إرسال طلبك بنجاح ✅');
+      } else {
+        alert(data.message || 'حدث خطأ، حاول مرة أخرى');
       }
     } catch (error) {
-      alert('حدث خطأ، حاول مرة أخرى');
+      alert('حدث خطأ في الاتصال، تحقق من الإنترنت');
     }
   };
 
