@@ -1938,14 +1938,15 @@ export default function App() {
     }
   };
 
-  const handleRegister = async () => {
+  const handleRegister = async (overrideRole?: string) => {
+    const finalRole = overrideRole || userRole || 'worker';
     setIsAuthLoading(true);
     try {
       const data = await authService.register({
         name: fullName,
         email,
         password,
-        role: userRole || 'worker',
+        role: finalRole,
         location: wilaya && commune ? `${wilaya}, ${commune}` : undefined
       });
 
@@ -2484,7 +2485,10 @@ export default function App() {
                 sub={t.role_employer_sub} 
                 active={userRole === 'employer'}
                 description={t.ob1_desc}
-                onClick={() => setUserRole('employer')}
+                onClick={() => {
+                  setUserRole('employer');
+                  handleRegister('employer');
+                }}
                 i18nTitleKey="role_employer"
                 i18nSubKey="role_employer_sub"
                 i18nDescKey="ob1_desc"
@@ -2495,7 +2499,10 @@ export default function App() {
                 sub={t.role_worker_sub} 
                 active={userRole === 'worker'}
                 description={t.ob2_desc}
-                onClick={() => setUserRole('worker')}
+                onClick={() => {
+                  setUserRole('worker');
+                  handleRegister('worker');
+                }}
                 i18nTitleKey="role_worker"
                 i18nSubKey="role_worker_sub"
                 i18nDescKey="ob2_desc"
