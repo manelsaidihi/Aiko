@@ -724,29 +724,39 @@ const WorkerCard = ({ name, skill, rating, price, distance, icon: Icon, onOffer,
 };
 
 // --- Error Boundary ---
-class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { hasError: boolean }> {
-  constructor(props: any) {
+class ErrorBoundary extends React.Component<
+  {children: React.ReactNode},
+  {hasError: boolean}
+> {
+  constructor(props: {children: React.ReactNode}) {
     super(props);
     this.state = { hasError: false };
   }
   static getDerivedStateFromError() {
     return { hasError: true };
   }
-  componentDidCatch(error: any, errorInfo: any) {
-    console.error("Aiko App Error:", error, errorInfo);
+  componentDidCatch(error: Error) {
+    console.error('App Error:', error);
   }
   render() {
     if (this.state.hasError) {
       return (
-        <div className="flex flex-col items-center justify-center h-screen p-4 bg-aiko-gray-100 text-center">
-          <div className="w-20 h-20 bg-red-100 text-red-500 rounded-3xl flex items-center justify-center mb-4">
-            <X size={40} />
-          </div>
-          <h1 className="text-2xl font-black text-aiko-navy mb-2">عذراً، حدث خطأ غير متوقع</h1>
-          <p className="text-aiko-navy/40 font-bold mb-6">يرجى المحاولة مرة أخرى أو إعادة تحميل الصفحة</p>
+        <div style={{
+          textAlign:'center',
+          padding:'40px',
+          direction:'rtl'
+        }}>
+          <p>حدث خطأ غير متوقع</p>
           <button
-            onClick={() => this.setState({ hasError: false })}
-            className="px-8 py-3 bg-aiko-teal text-white rounded-2xl font-black shadow-lg shadow-aiko-teal/20"
+            onClick={() => this.setState({hasError: false})}
+            style={{
+              padding:'10px 20px',
+              backgroundColor:'#0F6E56',
+              color:'white',
+              border:'none',
+              borderRadius:'8px',
+              cursor:'pointer'
+            }}
           >
             إعادة المحاولة
           </button>
