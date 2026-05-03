@@ -4124,10 +4124,27 @@ export default function App() {
                       </div>
                       <div>
                         <h3 className="text-3xl font-black text-aiko-navy">{viewedUser.name}</h3>
-                        <div className="flex items-center justify-center gap-2 text-aiko-navy/40 font-bold text-sm">
-                          <MapPin size={16} />
-                          <span>{viewedUser.wilaya} {viewedUser.municipality ? `· ${viewedUser.municipality}` : ''}</span>
-                        </div>
+
+                        {(viewedUser.wilaya || viewedUser.municipality) && (
+                          <div className="flex items-center justify-center gap-2 text-aiko-navy/40 font-bold text-sm mt-1">
+                            <MapPin size={16} className="text-aiko-teal" />
+                            <span>{viewedUser.wilaya}{viewedUser.wilaya && viewedUser.municipality ? ' · ' : ''}{viewedUser.municipality}</span>
+                          </div>
+                        )}
+
+                        {viewedUser.email && (
+                          <div className="flex items-center justify-center gap-2 text-aiko-navy/60 font-bold text-sm mt-1">
+                            <Mail size={16} className="text-aiko-teal" />
+                            <a href={`mailto:${viewedUser.email}`} className="hover:text-aiko-teal transition-colors">{viewedUser.email}</a>
+                          </div>
+                        )}
+
+                        {viewedUser.phone && (
+                          <div className="flex items-center justify-center gap-2 text-aiko-navy/60 font-bold text-sm mt-1">
+                            <Phone size={16} className="text-aiko-orange" />
+                            <a href={`tel:${viewedUser.phone}`} className="hover:text-aiko-orange transition-colors">{viewedUser.phone}</a>
+                          </div>
+                        )}
                       </div>
 
                       <div className="flex justify-center gap-6">
@@ -4153,12 +4170,14 @@ export default function App() {
                     </div>
 
                     <div className="space-y-4">
-                      <div className="space-y-2">
-                        <SectionTitle title={isRTL ? "نبذة" : "Bio"} />
-                        <p className="text-sm font-bold text-aiko-navy/60 leading-relaxed bg-aiko-gray-50 p-4 rounded-2xl">
-                          {viewedUser.bio || (isRTL ? "لا يوجد وصف حالياً" : "No bio provided")}
-                        </p>
-                      </div>
+                      {viewedUser.bio && (
+                        <div className="space-y-2">
+                          <SectionTitle title={isRTL ? "نبذة" : "Bio"} />
+                          <p className="text-sm font-bold text-aiko-navy/60 leading-relaxed bg-aiko-gray-50 p-4 rounded-2xl">
+                            {viewedUser.bio}
+                          </p>
+                        </div>
+                      )}
 
                       {viewedUser.portfolio && viewedUser.portfolio.length > 0 && (
                         <div className="space-y-2">
@@ -4177,7 +4196,7 @@ export default function App() {
                         </div>
                       )}
 
-                      {viewedUser.role === 'worker' && (
+                      {viewedUser.role === 'worker' && viewedUserReviews && viewedUserReviews.length > 0 && (
                         <div className="space-y-2">
                           <SectionTitle title={isRTL ? "ما يقوله الآخرون" : "Reviews"} />
                           <div className="space-y-2">
@@ -4193,9 +4212,6 @@ export default function App() {
                                 <p className="text-[11px] font-bold text-aiko-navy/60 leading-relaxed">{review.comment}</p>
                               </div>
                             ))}
-                            {viewedUserReviews.length === 0 && (
-                              <p className="text-[10px] font-bold text-aiko-navy/20 text-center py-2">{isRTL ? "لا توجد تقييمات بعد" : "No reviews yet"}</p>
-                            )}
                           </div>
                         </div>
                       )}
