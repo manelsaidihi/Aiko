@@ -492,6 +492,18 @@ const ALGERIA_WILAYAS = Object.keys(ALGERIA_LOCATIONS).length > 0 ? Object.keys(
   "46 - Aïn Témouchent", "47 - Ghardaïa", "48 - Relizane"
 ];
 
+const getWilayaName = (wilaya: string) => {
+  if (!wilaya) return "";
+  if (wilaya.includes(" - ")) {
+    return wilaya.split(" - ")[1];
+  }
+  const found = ALGERIA_WILAYAS.find(w => w.startsWith(wilaya + " - "));
+  if (found) {
+    return found.split(" - ")[1];
+  }
+  return wilaya;
+};
+
 // --- Sub-components for Form ---
 const FormInput = ({ label, icon: Icon, type = "text", placeholder, value, onChange, i18nLabel, i18nPlaceholder, showPasswordToggle = false, isRTL }: any) => {
   const [show, setShow] = useState(false);
@@ -610,12 +622,12 @@ const JobCard = ({ title, company, location, price, time, type, icon: Icon, onAp
               onClick={(e) => { e.stopPropagation(); onViewProfile?.(); }}
               className="text-xs font-semibold text-aiko-navy/30 hover:text-aiko-teal transition-colors cursor-pointer"
             >
-              {company} · {location}
+              {company} · {getWilayaName(location)}
             </p>
           </div>
         </div>
         <div className="text-right">
-          <span className="text-sm font-black text-aiko-teal-dark">{price}</span>
+          <span className="text-sm font-black text-aiko-teal-dark">{price || (isRTL ? "غير محدد" : "Not specified")}</span>
           {type && (
             <div className={`text-[9px] font-black uppercase tracking-widest mt-1 flex items-center justify-end gap-1 ${urgent ? 'text-aiko-orange' : 'text-aiko-navy/30'}`}>
               {urgent && <Zap size={10} fill="currentColor" />}
@@ -2614,7 +2626,7 @@ export default function App() {
                       <MapPin size={16} />
                     </div>
                     <span className="group-hover:text-aiko-teal transition-colors">
-                      {wilaya && commune ? `${wilaya.split(' - ')[1]}, ${commune}` : (isRTL ? "الجزائر العاصمة، باب الزوار" : "Algiers, Bab Ezzouar")}
+                      {wilaya && commune ? `${getWilayaName(wilaya)}, ${commune}` : (isRTL ? "الجزائر العاصمة، باب الزوار" : "Algiers, Bab Ezzouar")}
                     </span>
                   </div>
                   <button className="text-aiko-teal font-black uppercase tracking-widest text-[10px] hover:text-aiko-orange transition-colors">
@@ -2987,7 +2999,7 @@ export default function App() {
                             </div>
                             <div>
                               <h4 className="font-black text-aiko-navy flex items-center gap-2">
-                                {req.title}
+                              {req.title} · {getWilayaName(req.wilaya)}
                                 {userRole === 'employer' && req.workerId && (
                                   <span
                                     onClick={() => handleViewProfile(req.workerId)}
@@ -3039,7 +3051,7 @@ export default function App() {
                             </div>
                           </div>
                           <div className="flex flex-col items-end gap-2">
-                            <span className="text-sm font-black text-aiko-teal">{req.budget}</span>
+                            <span className="text-sm font-black text-aiko-teal">{req.budget || (isRTL ? "غير محدد" : "Not specified")}</span>
                             {req.status === 'assigned' && (
                               <button
                                 onClick={() => handleCompleteRequest(req.id, req.workerId)}
@@ -3373,7 +3385,7 @@ export default function App() {
                             </div>
                             <div className="flex items-center justify-center gap-2 text-aiko-navy/40 font-bold text-sm">
                               <MapPin size={16} />
-                              <span>{profileData.wilaya} {profileData.municipality ? `· ${profileData.municipality}` : ''}</span>
+                              <span>{getWilayaName(profileData.wilaya)} {profileData.municipality ? `· ${profileData.municipality}` : ''}</span>
                             </div>
                             <div className="flex justify-center gap-6 pt-4">
                               <div className="text-center">
@@ -3680,11 +3692,11 @@ export default function App() {
                       <div className="grid grid-cols-2 gap-2 w-full">
                         <div className="bg-aiko-gray-100 p-2 rounded-2xl">
                           <p className="text-[10px] font-black uppercase tracking-widest text-aiko-navy/30">{isRTL ? "الموقع" : "Location"}</p>
-                          <p className="text-sm font-black text-aiko-navy mt-1">{activeItem.location || activeItem.distance}</p>
+                          <p className="text-sm font-black text-aiko-navy mt-1">{getWilayaName(activeItem.wilaya || activeItem.location) || activeItem.distance}</p>
                         </div>
                         <div className="bg-aiko-teal-bg p-2 rounded-2xl">
                           <p className="text-[10px] font-black uppercase tracking-widest text-aiko-teal-dark/30">{isRTL ? "الميزانية" : "Budget"}</p>
-                          <p className="text-sm font-black text-aiko-teal-dark mt-1">{activeItem.price}</p>
+                          <p className="text-sm font-black text-aiko-teal-dark mt-1">{activeItem.budget || activeItem.price || (isRTL ? "غير محدد" : "Not specified")}</p>
                         </div>
                       </div>
 
@@ -3943,6 +3955,7 @@ export default function App() {
                       <FormInput
                         label={isRTL ? "السعر المقترح (دج)" : "Proposed Price (DA)"}
                         type="number"
+                        placeholder={isRTL ? "أدخل ميزانيتك (دج)" : "Enter your budget (DA)"}
                         value={offerPrice}
                         onChange={(val: string) => setOfferPrice(val)}
                         icon={Sparkles}
@@ -4138,7 +4151,7 @@ export default function App() {
                         {(viewedUser.wilaya || viewedUser.municipality) && (
                           <div className="flex items-center justify-center gap-2 text-aiko-navy/40 font-bold text-sm mt-1">
                             <MapPin size={16} className="text-aiko-teal" />
-                            <span>{viewedUser.wilaya}{viewedUser.wilaya && viewedUser.municipality ? ' · ' : ''}{viewedUser.municipality}</span>
+                            <span>{getWilayaName(viewedUser.wilaya)}{viewedUser.wilaya && viewedUser.municipality ? ' · ' : ''}{viewedUser.municipality}</span>
                           </div>
                         )}
 
@@ -4319,6 +4332,8 @@ export default function App() {
                         />
                         <FormInput
                           label={isRTL ? "الميزانية" : "Budget"}
+                          type="number"
+                          placeholder={isRTL ? "أدخل ميزانيتك (دج)" : "Enter your budget (DA)"}
                           value={serviceData.budget}
                           onChange={(val: string) => setServiceData({...serviceData, budget: val})}
                           icon={Sparkles}
